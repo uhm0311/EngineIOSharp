@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29911.84
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EngineIOSharp", "EngineIOSharp\EngineIOSharp.csproj", "{2EDE989E-0772-4B20-BF3F-04ED60BE9813}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "EngineIOSharp", "EngineIOSharp\EngineIOSharp.csproj", "{2EDE989E-0772-4B20-BF3F-04ED60BE9813}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EngineIOSharp-Example", "EngineIOSharp-Example\EngineIOSharp-Example.csproj", "{AB265FFD-6ABC-4967-A68B-01334EAB8E1E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EngineIOSharp-Example Client", "EngineIOSharp-Example Client\EngineIOSharp-Example Client.csproj", "{AB265FFD-6ABC-4967-A68B-01334EAB8E1E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

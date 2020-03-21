@@ -6,8 +6,8 @@
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <ProjectGuid>{AB265FFD-6ABC-4967-A68B-01334EAB8E1E}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>EngineIOSharp.Example</RootNamespace>
-    <AssemblyName>EngineIOSharp-Example</AssemblyName>
+    <RootNamespace>EngineIOSharp.Example.Client</RootNamespace>
+    <AssemblyName>EngineIOSharp Example Client</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
