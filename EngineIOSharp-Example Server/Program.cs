@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,10 +11,11 @@ namespace EngineIOSharp.Example.Server
 {
     class Program : WebSocketBehavior
     {
+        static WebSocketServer server = new WebSocketServer(1009);
+
         static void Main(string[] args)
         {
-            WebSocketServer server = new WebSocketServer(1009);
-            server.AddWebSocketService<Program>("");
+            server.AddWebSocketService<Program>("/engine.io/");
             server.Start();
 
             Console.Read();
@@ -22,12 +24,21 @@ namespace EngineIOSharp.Example.Server
 
         protected override void OnOpen()
         {
-            
+            WebSocket temp = Sessions[ID].Context.WebSocket;
+            JObject jObject = new JObject()
+            {
+                ["sid"] = ID,
+                ["pingTimeout"] = 10000,
+                ["pingInterval"] = 1000,
+                ["upgrades"] = new JArray(),
+            };
+
+            temp.Send("0" + jObject);
         }
 
         protected override void OnMessage(MessageEventArgs e)
         {
-            
+            Sessions[ID].Context.WebSocket.Send("3");
         }
 
         protected override void OnError(ErrorEventArgs e)
@@ -37,7 +48,7 @@ namespace EngineIOSharp.Example.Server
 
         protected override void OnClose(CloseEventArgs e)
         {
-            
+            object temp = ID;
         }
     }
 }

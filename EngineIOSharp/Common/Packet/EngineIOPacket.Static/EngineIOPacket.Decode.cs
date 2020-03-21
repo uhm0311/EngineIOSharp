@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using WebSocketSharp;
 
 namespace EngineIOSharp.Common.Packet
 {
@@ -12,7 +13,7 @@ namespace EngineIOSharp.Common.Packet
             {
                 EngineIOPacket Packet = new EngineIOPacket()
                 {
-                    EnginePacketType = (EngineIOPacketType)Data[0] - '0',
+                    Type = (EngineIOPacketType)Data[0] - '0',
                     IsText = true,
                     IsBinary = false,
                 };
@@ -38,7 +39,7 @@ namespace EngineIOSharp.Common.Packet
                 Queue<byte> BufferQueue = new Queue<byte>(RawData);
                 EngineIOPacket Packet = new EngineIOPacket()
                 {
-                    EnginePacketType = (EngineIOPacketType)BufferQueue.Dequeue(),
+                    Type = (EngineIOPacketType)BufferQueue.Dequeue(),
                     IsText = false,
                     IsBinary = true,
                 };
@@ -62,6 +63,11 @@ namespace EngineIOSharp.Common.Packet
 
                 throw new EngineIOException("Packet decoding failed. " + Builder, ex);
             }
+        }
+
+        internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
+        {
+            return EventArgs.IsText ? Decode(EventArgs.Data) : (EventArgs.IsBinary ? Decode(EventArgs.RawData) : null);
         }
     }
 }

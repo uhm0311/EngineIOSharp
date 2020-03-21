@@ -14,7 +14,10 @@ http.listen(port, function() {
 		socket.on('message', function (message) { 
 			console.log('Client : ' + message);
 			
-			socket.send(message);
+			socket.send(message, function (data) {
+				console.log('after message ');
+				console.log(data);
+			});
 		});
 		
 		socket.on('close', function() { 
@@ -25,5 +28,9 @@ http.listen(port, function() {
 			console.log(data);
 			console.log('Client disconnected!!');
 		});
+	});
+	
+	server.on('connection', function (socket) {	
+		console.log('Client connected!!');
 	});
 });
