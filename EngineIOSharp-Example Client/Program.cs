@@ -1,12 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EngineIOSharp.Client;
+﻿using EngineIOSharp.Client;
 using EngineIOSharp.Common;
+using System;
 
-namespace EngineIOSharp.Example
+namespace EngineIOSharp.Example.Client
 {
     class Program
     {
