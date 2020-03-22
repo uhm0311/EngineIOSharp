@@ -10,7 +10,7 @@
   <Company>uhm0311</Company>
   <Title>Engine.IO</Title>
   <Copyright>Copyright (c) 2020 uhm0311</Copyright>
-  <Description>C# implementation of Engine.IO protocol client.</Description>
+  <Description>C# implementation of Engine.IO protocol client and server.</Description>
   <PackageId>EngineIOSharp</PackageId>
     <PackageTags>Engine.IO;EngineIO</PackageTags>
     <PackageProjectUrl>https://github.com/uhm0311/EngineIOSharp</PackageProjectUrl>
