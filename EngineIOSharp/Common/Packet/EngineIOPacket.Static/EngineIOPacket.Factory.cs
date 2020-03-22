@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json.Linq;
+using System;
 using System.Text;
 
 namespace EngineIOSharp.Common.Packet
@@ -9,7 +10,8 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                EnginePacketType = EngineIOPacketType.PING
+                Type = EngineIOPacketType.PING,
+                IsText = true
             };
         }
 
@@ -17,7 +19,8 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                EnginePacketType = EngineIOPacketType.PONG
+                Type = EngineIOPacketType.PONG,
+                IsText = true
             };
         }
 
@@ -26,7 +29,27 @@ namespace EngineIOSharp.Common.Packet
             return new EngineIOPacket()
             {
                 IsText = true,
-                Data = Data
+                Data = Data,
+                RawData = Encoding.UTF8.GetBytes(Data)
+            };
+        }
+
+        internal static EngineIOPacket CreateOpenPacket(string SocketID, int PingInterval, int PingTimeout)
+        {
+            string Data = new JObject()
+            {
+                ["sid"] = SocketID,
+                ["pingInterval"] = PingInterval,
+                ["pingTimeout"] = PingTimeout,
+                ["upgrades"] = new JArray()
+            }.ToString();
+
+            return new EngineIOPacket()
+            {
+                Type = EngineIOPacketType.OPEN,
+                IsText = true,
+                Data = Data,
+                RawData = Encoding.UTF8.GetBytes(Data)
             };
         }
 
@@ -34,9 +57,8 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                EnginePacketType = EngineIOPacketType.MESSAGE,
+                Type = EngineIOPacketType.MESSAGE,
                 IsText = true,
-                IsBinary = false,
                 Data = Data,
                 RawData = Encoding.UTF8.GetBytes(Data)
             };
@@ -46,8 +68,7 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                EnginePacketType = EngineIOPacketType.MESSAGE,
-                IsText = false,
+                Type = EngineIOPacketType.MESSAGE,
                 IsBinary = true,
                 Data = BitConverter.ToString(RawData),
                 RawData = RawData

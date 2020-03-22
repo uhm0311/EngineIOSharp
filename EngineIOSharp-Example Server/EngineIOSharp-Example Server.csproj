@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{AB265FFD-6ABC-4967-A68B-01334EAB8E1E}</ProjectGuid>
+    <ProjectGuid>{FC0DEDE0-AB90-4171-BEFB-14C7E09B8A86}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>EngineIOSharp.Example.Client</RootNamespace>
-    <AssemblyName>EngineIOSharp Example Client</AssemblyName>
+    <RootNamespace>EngineIOSharp_Example_Server</RootNamespace>
+    <AssemblyName>EngineIOSharp-Example Server</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -48,15 +48,15 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup />
   <ItemGroup>
     <ProjectReference Include="..\EngineIOSharp\EngineIOSharp.csproj">
       <Project>{2ede989e-0772-4b20-bf3f-04ed60be9813}</Project>
       <Name>EngineIOSharp</Name>
     </ProjectReference>
   </ItemGroup>
-  <ItemGroup />
   <ItemGroup>
-    <Content Include="Server\EngineIOSharp Example Server.js" />
+    <Content Include="Client\EngineIOSharp Example Client.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

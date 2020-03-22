@@ -1,5 +1,6 @@
 ﻿using EngineIOSharp.Client;
 using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum;
 using System;
 
 namespace EngineIOSharp.Example.Client

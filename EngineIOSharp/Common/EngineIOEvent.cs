@@ -29,7 +29,8 @@
         public static readonly EngineIOEvent MESSAGE = new EngineIOEvent("message");
         public static readonly EngineIOEvent ERROR = new EngineIOEvent("error");
 
-        internal static readonly EngineIOEvent PING = new EngineIOEvent("ping");
-        internal static readonly EngineIOEvent PONG = new EngineIOEvent("pong");
+        public static readonly EngineIOEvent FLUSH = new EngineIOEvent("flush");
+        public static readonly EngineIOEvent PING = new EngineIOEvent("ping");
+        public static readonly EngineIOEvent PONG = new EngineIOEvent("pong");
     }
 }

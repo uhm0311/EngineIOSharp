@@ -34,18 +34,7 @@ namespace EngineIOSharp.Client
 
         private void OnWebsocketMessage(object sender, WebSocketSharp.MessageEventArgs e)
         {
-            EngineIOPacket Packet = null;
-
-            if (e.IsText)
-            {
-                Packet = EngineIOPacket.Decode(e.Data);
-            }
-            else if (e.IsBinary)
-            {
-                Packet = EngineIOPacket.Decode(e.RawData);
-            }
-
-            HandleEnginePacket(Packet);
+            HandleEngineIOPacket(EngineIOPacket.Decode(e));
         }
     }
 }

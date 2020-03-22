@@ -6,7 +6,7 @@ namespace EngineIOSharp.Common.Packet
 {
     public partial class EngineIOPacket
     {
-        public EngineIOPacketType EnginePacketType { get; private set; }
+        public EngineIOPacketType Type { get; private set; }
 
         public bool IsText { get; private set; }
         public bool IsBinary { get; private set; }
@@ -16,7 +16,7 @@ namespace EngineIOSharp.Common.Packet
 
         private EngineIOPacket()
         {
-            EnginePacketType = EngineIOPacketType.UNKNOWN;
+            Type = EngineIOPacketType.UNKNOWN;
 
             IsText = false;
             IsBinary = false;
@@ -28,7 +28,7 @@ namespace EngineIOSharp.Common.Packet
         public override string ToString()
         {
             StringBuilder Builder = new StringBuilder();
-            Builder.Append(string.Format("Packet: EnginePacketType={0}", EnginePacketType));
+            Builder.Append(string.Format("Packet: EnginePacketType={0}", Type));
 
             if (IsText)
             {
@@ -49,14 +49,14 @@ namespace EngineIOSharp.Common.Packet
                 if (IsText)
                 {
                     StringBuilder Builder = new StringBuilder();
-                    Builder.Append((int)EnginePacketType);
+                    Builder.Append((int)Type);
                     Builder.Append(Data);
 
                     return Builder.ToString();
                 }
                 else if (IsBinary)
                 {
-                    List<byte> RawData = new List<byte>() { (byte)EnginePacketType };
+                    List<byte> RawData = new List<byte>() { (byte)Type };
                     RawData.AddRange(RawData);
 
                     return RawData.ToArray();

@@ -10,19 +10,14 @@ http.listen(port, function() {
 	server.on('connection', function (socket) {	
 		console.log('Client connected!');
 		socket.send(Buffer.from([0, 1, 2, 3, 4, 5]));
-		socket.send('hello world');
-		socket.send(124123);
-		
-		socket.send(JSON.stringify({'test': 'test'}));
-		socket.send({'test': 'test'});
-		
-		socket.send(JSON.stringify([{'test1': 'test1'},{'test2': 'test2'}]));
-		socket.send([{'test1': 'test1'},{'test2': 'test2'}]);
 		
 		socket.on('message', function (message) { 
 			console.log('Client : ' + message);
 			
-			socket.send(message);
+			socket.send(message, function (data) {
+				console.log('after message ');
+				console.log(data);
+			});
 		});
 		
 		socket.on('close', function() { 
@@ -33,5 +28,9 @@ http.listen(port, function() {
 			console.log(data);
 			console.log('Client disconnected!!');
 		});
+	});
+	
+	server.on('connection', function (socket) {	
+		console.log('Client connected!!');
 	});
 });
