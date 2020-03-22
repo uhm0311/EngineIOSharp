@@ -22,7 +22,7 @@ namespace EngineIOSharp.Server
             {
                 if (!HeartbeatTimer.ContainsKey(Client))
                 {
-                    Timer TempTimer = new Timer(PingInterval);
+                    Timer TempTimer = new Timer(PingInterval + PingTimeout);
                     TempTimer.Elapsed += (sender, e) =>
                     {
                         LockHeartbeat(Client, () =>
@@ -43,7 +43,7 @@ namespace EngineIOSharp.Server
                         });
                     };
 
-                    TempTimer.AutoReset = false;
+                    TempTimer.AutoReset = true;
                     TempTimer.Start();
 
                     HeartbeatTimer.TryAdd(Client, TempTimer);
@@ -57,7 +57,10 @@ namespace EngineIOSharp.Server
             {
                 if (HeartbeatTimer.ContainsKey(Client))
                 {
+                    HeartbeatMutex.TryRemove(Client, out object _);
                     HeartbeatTimer.TryRemove(Client, out Timer TempTimer);
+                    Heartbeat.TryRemove(Client, out ulong __);
+
                     TempTimer.Stop();
                 }
             });

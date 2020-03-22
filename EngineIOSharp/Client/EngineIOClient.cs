@@ -1,7 +1,5 @@
 ﻿using EngineIOSharp.Abstract;
-using EngineIOSharp.Common;
-using EngineIOSharp.Common.Packet;
-using System;
+using EngineIOSharp.Common.Enum;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
@@ -10,19 +8,18 @@ namespace EngineIOSharp.Client
     public partial class EngineIOClient : EngineIOConnection
     {
         private readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
-        private WebSocket Client = null;
+
+        public WebSocket WebSocketClient { get; private set; }
 
         public string SocketID { get; private set; }
-
         public string URI { get; private set; }
 
         public uint AutoReconnect { get; set; }
-
         public bool IsAlive
         {
             get
             {
-                return Client?.IsAlive ?? false;
+                return WebSocketClient?.IsAlive ?? false;
             }
         }
 
@@ -61,7 +58,8 @@ namespace EngineIOSharp.Client
 
         private void Initialize(WebSocket Client)
         {
-            this.Client = Client;
+            this.WebSocketClient = Client;
+            this.WebSocketClient.Log.Output = (_, __) => { };
 
             Client.OnOpen += OnWebsocketOpen;
             Client.OnClose += OnWebsocketClose;
@@ -76,18 +74,18 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            if (Client == null)
+            if (WebSocketClient == null)
             {
                 Initialize();
             }
 
-            Client.Connect();
+            WebSocketClient.Connect();
         }
 
         public override void Close()
         {
-            Client?.Close();
-            Client = null;
+            WebSocketClient?.Close();
+            WebSocketClient = null;
 
             StopHeartbeat();
         }
@@ -98,7 +96,7 @@ namespace EngineIOSharp.Client
             {
                 EngineIOClient Temp = o as EngineIOClient;
 
-                return (Temp.SocketID?.Equals(SocketID) ?? false);
+                return Temp.GetHashCode() == GetHashCode();
             }
 
             return false;

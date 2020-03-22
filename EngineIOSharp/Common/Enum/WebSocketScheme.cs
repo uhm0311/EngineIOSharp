@@ -1,4 +1,4 @@
-﻿namespace EngineIOSharp.Common
+﻿namespace EngineIOSharp.Common.Enum
 {
     public enum WebSocketScheme
     {

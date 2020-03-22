@@ -1,11 +1,7 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Common.Packet;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Collections.Concurrent;
-using EngineIOSharp.Common.Packet;
 
 namespace EngineIOSharp.Server
 {
@@ -42,10 +38,6 @@ namespace EngineIOSharp.Server
             {
                 switch (Packet.Type)
                 {
-                    case EngineIOPacketType.CLOSE:
-                        Close();
-                        break;
-
                     case EngineIOPacketType.PING:
                         lock (ClientMutex)
                         {
@@ -57,9 +49,6 @@ namespace EngineIOSharp.Server
                             Heartbeat[Client]++;
                             Client?.Send(EngineIOPacket.CreatePongPacket());
                         }
-                        break;
-
-                    case EngineIOPacketType.PONG:
                         break;
                 }
             }

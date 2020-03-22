@@ -1,54 +1,43 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using WebSocketSharp;
-using WebSocketSharp.Server;
+using EngineIOSharp.Server;
+using EngineIOSharp.Common;
 
 namespace EngineIOSharp.Example.Server
 {
-    class Program : WebSocketBehavior
+    class Program
     {
-        static WebSocketServer server = new WebSocketServer(1009);
-
         static void Main(string[] args)
         {
-            server.AddWebSocketService<Program>("/engine.io/");
-            server.Start();
+            int port = 1009;
 
-            Console.Read();
-            server.Stop();
-        }
-
-        protected override void OnOpen()
-        {
-            WebSocket temp = Sessions[ID].Context.WebSocket;
-            JObject jObject = new JObject()
+            using (EngineIOServer server = new EngineIOServer(port))
             {
-                ["sid"] = ID,
-                ["pingTimeout"] = 10000,
-                ["pingInterval"] = 1000,
-                ["upgrades"] = new JArray(),
-            };
+                Console.WriteLine("Listening on " + port);
 
-            temp.Send("0" + jObject);
-        }
+                server.OnConnection((client) =>
+                {
+                    Console.WriteLine("Client connected!");
 
-        protected override void OnMessage(MessageEventArgs e)
-        {
-            Sessions[ID].Context.WebSocket.Send("3");
-        }
+                    client.On(EngineIOEvent.MESSAGE, (message) =>
+                    {
+                        Console.WriteLine("Client : " + message.Data);
+                        client.Send(message.Data);
+                    });
 
-        protected override void OnError(ErrorEventArgs e)
-        {
-            
-        }
+                    client.On(EngineIOEvent.CLOSE, () =>
+                    {
+                        Console.WriteLine("Client disconnected!");
+                    });
+                });
 
-        protected override void OnClose(CloseEventArgs e)
-        {
-            object temp = ID;
+                server.Start();
+
+                Console.Read();
+            }
         }
     }
 }

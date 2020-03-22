@@ -22,11 +22,11 @@ namespace EngineIOSharp.Client
             {
                 if (Packet.IsText)
                 {
-                    Client.Send(Packet.Encode() as string);
+                    WebSocketClient.Send(Packet.Encode() as string);
                 }
                 else if (Packet.IsBinary)
                 {
-                    Client.Send(Packet.Encode() as byte[]);
+                    WebSocketClient.Send(Packet.Encode() as byte[]);
                 }
 
                 if (Packet.IsText || Packet.IsBinary)

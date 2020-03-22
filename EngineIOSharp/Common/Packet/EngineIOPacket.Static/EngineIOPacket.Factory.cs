@@ -10,7 +10,8 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                Type = EngineIOPacketType.PING
+                Type = EngineIOPacketType.PING,
+                IsText = true
             };
         }
 
@@ -18,7 +19,8 @@ namespace EngineIOSharp.Common.Packet
         {
             return new EngineIOPacket()
             {
-                Type = EngineIOPacketType.PONG
+                Type = EngineIOPacketType.PONG,
+                IsText = true
             };
         }
 
@@ -34,17 +36,20 @@ namespace EngineIOSharp.Common.Packet
 
         internal static EngineIOPacket CreateOpenPacket(string SocketID, int PingInterval, int PingTimeout)
         {
+            string Data = new JObject()
+            {
+                ["sid"] = SocketID,
+                ["pingInterval"] = PingInterval,
+                ["pingTimeout"] = PingTimeout,
+                ["upgrades"] = new JArray()
+            }.ToString();
+
             return new EngineIOPacket()
             {
                 Type = EngineIOPacketType.OPEN,
                 IsText = true,
-                Data = new JObject()
-                {
-                    ["sid"] = SocketID,
-                    ["pingInterval"] = PingInterval,
-                    ["pingTimeout"] = PingTimeout,
-                    ["upgrades"] = new JArray()
-                }.ToString()
+                Data = Data,
+                RawData = Encoding.UTF8.GetBytes(Data)
             };
         }
 

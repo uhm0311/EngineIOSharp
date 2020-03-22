@@ -10,6 +10,7 @@ socket.on('open', function () {
 	
 	socket.on('close', function () {
 		console.log('Disconnected!');
+		process.exit();
 	});
 });
 
@@ -18,6 +19,14 @@ const readline = require('readline').createInterface({
 	output: process.stdout
 });
 
-readline.question('', function (message) {
-	socket.send(message);
-});
+function onMessage (message) {
+	if (message != '/exit') {
+		socket.send(message);
+		readline.question('', onMessage);
+	} else {
+		process.exit();
+	}
+}
+
+console.log('input /exit to exit program.');
+readline.question('', onMessage);
