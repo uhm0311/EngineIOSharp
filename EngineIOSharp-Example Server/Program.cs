@@ -1,5 +1,6 @@
-﻿using EngineIOSharp.Common;
+﻿using EngineIOSharp.Client.Event;
 using EngineIOSharp.Server;
+using EngineIOSharp.Server.Event;
 using System;
 
 namespace EngineIOSharp.Example.Server
@@ -8,23 +9,21 @@ namespace EngineIOSharp.Example.Server
     {
         static void Main(string[] args)
         {
-            int port = 1009;
-
-            using (EngineIOServer server = new EngineIOServer(port))
+            using (EngineIOServer server = new EngineIOServer(1009))
             {
-                Console.WriteLine("Listening on " + port);
+                Console.WriteLine("Listening on " + server.Port);
 
-                server.OnConnection((client) =>
+                server.On(EngineIOServerEvent.CONNECTION, (client) =>
                 {
                     Console.WriteLine("Client connected!");
 
-                    client.On(EngineIOEvent.MESSAGE, (message) =>
+                    client.On(EngineIOClientEvent.MESSAGE, (message) =>
                     {
                         Console.WriteLine("Client : " + message.Data);
                         client.Send(message.Data);
                     });
 
-                    client.On(EngineIOEvent.CLOSE, () =>
+                    client.On(EngineIOClientEvent.CLOSE, () =>
                     {
                         Console.WriteLine("Client disconnected!");
                     });
@@ -32,7 +31,13 @@ namespace EngineIOSharp.Example.Server
 
                 server.Start();
 
-                Console.Read();
+                Console.WriteLine("Input /exit to exit program.");
+                string line;
+
+                while (!(line = Console.ReadLine())?.Trim()?.ToLower()?.Equals("/exit") ?? false)
+                {
+                    server.Broadcast(line);
+                }
             }
         }
     }

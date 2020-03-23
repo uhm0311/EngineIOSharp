@@ -1,12 +1,15 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Common.Packet;
+using EngineIOSharp.Server.Event;
 using System;
-using System.Linq;
 using System.Net;
+using System.Threading;
+using WebSocketSharp;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
 {
-    public partial class EngineIOServer : WebSocketBehavior, IDisposable
+    public partial class EngineIOServer : IDisposable
     {
         private readonly object ServerMutex = new object();
 
@@ -15,8 +18,8 @@ namespace EngineIOSharp.Server
         public int PingInterval { get; private set; }
         public int PingTimeout { get; private set; }
 
-        public EngineIOClient[] Clients { get { return ClientList.Values.ToArray(); } }
-        public int ClientsCount { get { return ClientList.Values.Count; } }
+        public EngineIOClient[] Clients { get { return ClientList.ToArray(); } }
+        public int ClientsCount { get { return ClientList.Count; } }
 
         public IPAddress IPAddress { get; private set; }
         public int Port { get; private set; }
@@ -57,32 +60,48 @@ namespace EngineIOSharp.Server
 
         private void Initialize()
         {
+            Action<LogData, string> LogOutput = WebSocketServer?.Log?.Output ?? ((_, __) => { });
             WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
 
-            WebSocketServer.Log.Output = (_, __) => { };
-            WebSocketServer.AddWebSocketService("/engine.io/", () => this);
+            WebSocketServer.Log.Output = LogOutput;
+            WebSocketServer.AddWebSocketService("/engine.io/", () => new EngineIOBehavior((EngineIOClient Client, string SocketID) =>
+            {
+                Monitor.Enter(ClientMutex);
+                {
+                    if (!HeartbeatMutex.ContainsKey(Client))
+                    {
+                        Client.Send(EngineIOPacket.CreateOpenPacket(SocketID, PingInterval, PingTimeout));
+                        ClientList.Add(Client);
+
+                        StartHeartbeat(Client);
+                        CallEventHandler(EngineIOServerEvent.CONNECTION, Client);
+                    }
+                }
+                Monitor.Exit(ClientMutex);
+            }));
         }
 
         public void Start()
         {
-            lock (ServerMutex)
+            Monitor.Enter(ServerMutex);
             {
                 if (!IsListening)
                 {
                     WebSocketServer.Start();
                 }
             }
+            Monitor.Exit(ServerMutex);
         }
 
         public void Close()
         {
-            lock (ServerMutex)
+            Monitor.Enter(ServerMutex);
             {
                 if (IsListening)
                 {
-                    lock (ClientMutex)
+                    Monitor.Enter(ClientMutex);
                     {
-                        foreach (EngineIOClient Client in ClientList.Values)
+                        foreach (EngineIOClient Client in ClientList)
                         {
                             Client.Close();
                         }
@@ -90,8 +109,10 @@ namespace EngineIOSharp.Server
                         WebSocketServer.Stop();
                         Initialize();
                     }
+                    Monitor.Exit(ClientMutex);
                 }
             }
+            Monitor.Exit(ServerMutex);
         }
 
         public void Dispose()

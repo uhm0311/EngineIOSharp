@@ -1,5 +1,6 @@
 ﻿using EngineIOSharp.Common.Enum;
 using System;
+using System.Threading;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
@@ -63,9 +64,10 @@ namespace EngineIOSharp.Client
 
         private void Initialize(WebSocket Client)
         {
+            Action<LogData, string> LogOutput = WebSocketClient?.Log?.Output ?? ((_, __) => { });
             WebSocketClient = Client;
-            WebSocketClient.Log.Output = (_, __) => { };
 
+            WebSocketClient.Log.Output = LogOutput;
             WebSocketClient.OnOpen += OnWebsocketOpen;
             WebSocketClient.OnClose += OnWebsocketClose;
             WebSocketClient.OnMessage += OnWebsocketMessage;
@@ -79,21 +81,23 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            lock (ClientMutex)
+            Monitor.Enter(ClientMutex);
             {
                 WebSocketClient.Connect();
             }
+            Monitor.Exit(ClientMutex);
         }
 
         public void Close()
         {
-            lock (ClientMutex)
+            Monitor.Enter(ClientMutex);
             {
                 WebSocketClient?.Close();
                 Initialize();
 
                 StopHeartbeat();
             }
+            Monitor.Exit(ClientMutex);
         }
 
         public void Dispose()

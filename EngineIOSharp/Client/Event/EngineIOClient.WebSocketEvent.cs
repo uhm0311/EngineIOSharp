@@ -1,10 +1,6 @@
-﻿using EngineIOSharp.Common;
+﻿using EngineIOSharp.Client.Event;
 using EngineIOSharp.Common.Packet;
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EngineIOSharp.Client
 {
@@ -18,7 +14,7 @@ namespace EngineIOSharp.Client
 
         private void OnWebsocketClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
-            CallEventHandler(EngineIOEvent.CLOSE);
+            CallEventHandler(EngineIOClientEvent.CLOSE);
 
             if (AutoReconnect > AutoReconnectionCount)
             {
@@ -29,7 +25,7 @@ namespace EngineIOSharp.Client
 
         private void OnWebsocketError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            CallEventHandler(EngineIOEvent.ERROR, EngineIOPacket.CreateErrorPacket(e.Message, e.Exception));
+            CallEventHandler(EngineIOClientEvent.ERROR, EngineIOPacket.CreateErrorPacket(e.Message, e.Exception));
         }
 
         private void OnWebsocketMessage(object sender, WebSocketSharp.MessageEventArgs e)

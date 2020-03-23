@@ -1,4 +1,4 @@
-﻿using EngineIOSharp.Common;
+﻿using EngineIOSharp.Client.Event;
 using EngineIOSharp.Common.Packet;
 using System;
 
@@ -8,12 +8,18 @@ namespace EngineIOSharp.Client
     {
         public void Send(string Data, Action Callback = null)
         {
-            Send(EngineIOPacket.CreateMessagePacket(Data), Callback);
+            if (!string.IsNullOrEmpty(Data))
+            {
+                Send(EngineIOPacket.CreateMessagePacket(Data), Callback);
+            }
         }
 
         public void Send(byte[] RawData, Action Callback = null)
         {
-            Send(EngineIOPacket.CreateMessagePacket(RawData), Callback);
+            if ((RawData?.Length ?? 0) > 0)
+            {
+                Send(EngineIOPacket.CreateMessagePacket(RawData), Callback);
+            }
         }
 
         internal void Send(EngineIOPacket Packet, Action Callback = null)
@@ -32,7 +38,16 @@ namespace EngineIOSharp.Client
                 if (Packet.IsText || Packet.IsBinary)
                 {
                     Callback?.Invoke();
-                    CallEventHandler(EngineIOEvent.FLUSH);
+                    CallEventHandler(EngineIOClientEvent.FLUSH);
+
+                    if (Packet.Type == EngineIOPacketType.PING)
+                    {
+                        CallEventHandler(EngineIOClientEvent.PING_SEND);
+                    }
+                    else if (Packet.Type == EngineIOPacketType.PONG)
+                    {
+                        CallEventHandler(EngineIOClientEvent.PONG_SEND);
+                    }
                 }
             }
         }

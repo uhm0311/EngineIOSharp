@@ -1,5 +1,6 @@
 ﻿using EngineIOSharp.Common.Packet;
-using System.Timers;
+using System.Threading;
+using Timer = System.Timers.Timer;
 
 namespace EngineIOSharp.Client
 {
@@ -15,38 +16,40 @@ namespace EngineIOSharp.Client
 
         private void StartPing()
         {
-            lock (PingMutex)
+            Monitor.Enter(PingMutex);
             {
                 if (PingTimer == null)
                 {
                     PingTimer = new Timer(1000);
                     PingTimer.Elapsed += (sender, e) =>
                     {
-                        lock (PingMutex)
+                        Monitor.Enter(PingMutex);
                         {
                             PingTimer.Interval = PingInterval;
 
                             Send(EngineIOPacket.CreatePingPacket());
                             StartPong();
                         }
+                        Monitor.Exit(PingMutex);
                     };
 
                     PingTimer.AutoReset = true;
                     PingTimer.Start();
                 }
             }
+            Monitor.Exit(PingMutex);
         }
 
         private void StartPong()
         {
-            lock (PongMutex)
+            Monitor.Enter(PongMutex);
             {
                 if (PongTimer == null)
                 {
                     PongTimer = new Timer(PingTimeout);
                     PongTimer.Elapsed += (sender, e) =>
                     {
-                        lock (PongMutex)
+                        Monitor.Enter(PongMutex);
                         {
                             if (Pong > 0)
                             {
@@ -57,6 +60,7 @@ namespace EngineIOSharp.Client
                                 Close();
                             }
                         }
+                        Monitor.Exit(PongMutex);
                     };
 
                     PongTimer.AutoReset = false;
@@ -67,21 +71,24 @@ namespace EngineIOSharp.Client
                     PongTimer.Start();
                 }
             }
+            Monitor.Exit(PongMutex);
         }
 
         private void StopHeartbeat()
         {
-            lock (PingMutex)
+            Monitor.Enter(PingMutex);
             {
                 PingTimer?.Stop();
                 PingTimer = null;
             }
+            Monitor.Exit(PingMutex);
 
-            lock (PongMutex)
+            Monitor.Enter(PongMutex);
             {
                 PongTimer?.Stop();
                 PongTimer = null;
             }
+            Monitor.Exit(PongMutex);
         }
     }
 }
