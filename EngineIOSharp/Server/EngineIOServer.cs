@@ -1,16 +1,19 @@
-﻿using EngineIOSharp.Abstract;
-using EngineIOSharp.Client;
+﻿using EngineIOSharp.Client;
+using System;
 using System.Linq;
 using System.Net;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
 {
-    public partial class EngineIOServer : EngineIOConnection
+    public partial class EngineIOServer : WebSocketBehavior, IDisposable
     {
         private readonly object ServerMutex = new object();
 
         public WebSocketServer WebSocketServer { get; private set; }
+
+        public int PingInterval { get; private set; }
+        public int PingTimeout { get; private set; }
 
         public EngineIOClient[] Clients { get { return ClientList.Values.ToArray(); } }
         public int ClientsCount { get { return ClientList.Values.Count; } }
@@ -57,19 +60,7 @@ namespace EngineIOSharp.Server
             WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
 
             WebSocketServer.Log.Output = (_, __) => { };
-            WebSocketServer.AddWebSocketService("/engine.io/", () => new WebSocketEvent
-            (
-                PingInterval,
-                PingTimeout,
-                SocketIDList,
-                ClientList,
-                ClientMutex,
-                ConnectionEventHandlers,
-                ConnectionEventHandlersMutex,
-                StartHeartbeat,
-                StopHeartbeat,
-                HandleEngineIOPacket
-            ));
+            WebSocketServer.AddWebSocketService("/engine.io/", () => this);
         }
 
         public void Start()
@@ -83,7 +74,7 @@ namespace EngineIOSharp.Server
             }
         }
 
-        public override void Close()
+        public void Close()
         {
             lock (ServerMutex)
             {
@@ -101,6 +92,11 @@ namespace EngineIOSharp.Server
                     }
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
     }
 }

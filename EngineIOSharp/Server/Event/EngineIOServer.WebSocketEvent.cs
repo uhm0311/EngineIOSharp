@@ -16,91 +16,53 @@ namespace EngineIOSharp.Server
         private readonly ConcurrentDictionary<WebSocket, EngineIOClient> ClientList = new ConcurrentDictionary<WebSocket, EngineIOClient>();
         private readonly object ClientMutex = new object();
 
-        internal class WebSocketEvent : WebSocketBehavior
+        protected override void OnOpen()
         {
-            private readonly int PingInterval;
-            private readonly int PingTimeout;
-
-            private readonly ConcurrentDictionary<WebSocket, EngineIOClient> ClientList;
-            private readonly ConcurrentDictionary<string, WebSocket> SocketIDList;
-
-            private readonly object ClientMutex;
-
-            private readonly List<Action<EngineIOClient>> ConnectionEventHandlers;
-            private readonly object ConnectionEventHandlersMutex;
-
-            private readonly Action<EngineIOClient> StartHeartbeat;
-            private readonly Action<EngineIOClient> StopHeartbeat;
-
-            private readonly Action<EngineIOClient, EngineIOPacket> HandleEngineIOPacket;
-
-            public WebSocketEvent(int PingInterval, int PingTimeout, ConcurrentDictionary<string, WebSocket> SocketIDList, ConcurrentDictionary<WebSocket, EngineIOClient> ClientList, object ClientMutex, List<Action<EngineIOClient>> ConnectionEventHandlers, object ConnectionEventHandlersMutex, Action<EngineIOClient> StartHeartbeat, Action<EngineIOClient> StopHeartbeat, Action<EngineIOClient, EngineIOPacket> HandleEngineIOPacket)
+            lock (ClientMutex)
             {
-                this.PingInterval = PingInterval;
-                this.PingTimeout = PingTimeout;
-
-                this.SocketIDList = SocketIDList;
-
-                this.ClientList = ClientList;
-                this.ClientMutex = ClientMutex;
-
-                this.ConnectionEventHandlers = ConnectionEventHandlers;
-                this.ConnectionEventHandlersMutex = ConnectionEventHandlersMutex;
-
-                this.StartHeartbeat = StartHeartbeat;
-                this.StopHeartbeat = StopHeartbeat;
-
-                this.HandleEngineIOPacket = HandleEngineIOPacket;
-            }
-
-            protected override void OnOpen()
-            {
-                lock (ClientMutex)
+                if (ID != null)
                 {
-                    if (ID != null)
+                    WebSocketContext Context = Sessions[ID].Context;
+
+                    if (!ClientList.ContainsKey(Context.WebSocket))
                     {
-                        WebSocketContext Context = Sessions[ID].Context;
+                        EngineIOClient Client = new EngineIOClient(Context);
 
-                        if (!ClientList.ContainsKey(Context.WebSocket))
+                        SocketIDList.TryAdd(ID, Context.WebSocket);
+                        ClientList.TryAdd(Context.WebSocket, Client);
+
+                        Context.WebSocket.OnMessage += (sender, e) =>
                         {
-                            EngineIOClient Client = new EngineIOClient(Context);
+                            try { HandleEngineIOPacket(ClientList[sender as WebSocket], EngineIOPacket.Decode(e)); }
+                            catch { }
+                        };
 
-                            SocketIDList.TryAdd(ID, Context.WebSocket);
-                            ClientList.TryAdd(Context.WebSocket, Client);
+                        Client.Send(EngineIOPacket.CreateOpenPacket(ID, PingInterval, PingTimeout));
+                        StartHeartbeat(Client);
 
-                            Context.WebSocket.OnMessage += (sender, e) =>
+                        lock (ConnectionEventHandlersMutex)
+                        {
+                            foreach (Action<EngineIOClient> Callback in ConnectionEventHandlers)
                             {
-                                try { HandleEngineIOPacket(ClientList[sender as WebSocket], EngineIOPacket.Decode(e)); }
-                                catch { }
-                            };
-
-                            Client.Send(EngineIOPacket.CreateOpenPacket(ID, PingInterval, PingTimeout));
-                            StartHeartbeat(Client);
-
-                            lock (ConnectionEventHandlersMutex)
-                            {
-                                foreach (Action<EngineIOClient> Callback in ConnectionEventHandlers)
-                                {
-                                    Callback?.Invoke(Client);
-                                }
+                                Callback?.Invoke(Client);
                             }
                         }
                     }
                 }
             }
+        }
 
-            protected override void OnClose(CloseEventArgs e)
+        protected override void OnClose(CloseEventArgs e)
+        {
+            lock (ClientMutex)
             {
-                lock (ClientMutex)
+                if (ID != null && SocketIDList.ContainsKey(ID))
                 {
-                    if (ID != null && SocketIDList.ContainsKey(ID))
-                    {
-                        SocketIDList.TryRemove(ID, out WebSocket WebSocket);
-                        ClientList.TryRemove(WebSocket, out EngineIOClient Client);
+                    SocketIDList.TryRemove(ID, out WebSocket WebSocket);
+                    ClientList.TryRemove(WebSocket, out EngineIOClient Client);
 
-                        StopHeartbeat(Client);
-                        Client?.Close();
-                    }
+                    StopHeartbeat(Client);
+                    Client?.Close();
                 }
             }
         }

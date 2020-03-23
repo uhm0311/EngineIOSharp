@@ -1,17 +1,20 @@
-﻿using EngineIOSharp.Abstract;
-using EngineIOSharp.Common.Enum;
+﻿using EngineIOSharp.Common.Enum;
+using System;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
 namespace EngineIOSharp.Client
 {
-    public partial class EngineIOClient : EngineIOConnection
+    public partial class EngineIOClient : IDisposable
     {
         private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
 
         private readonly object ClientMutex = new object();
 
         public WebSocket WebSocketClient { get; private set; }
+
+        public int PingInterval { get; private set; }
+        public int PingTimeout { get; private set; }
 
         public string SocketID { get; private set; }
         public string URI { get; private set; }
@@ -82,7 +85,7 @@ namespace EngineIOSharp.Client
             }
         }
 
-        public override void Close()
+        public void Close()
         {
             lock (ClientMutex)
             {
@@ -91,6 +94,11 @@ namespace EngineIOSharp.Client
 
                 StopHeartbeat();
             }
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
 
         public override bool Equals(object o)
