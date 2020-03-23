@@ -9,7 +9,7 @@ namespace EngineIOSharp.Example.Server
     {
         static void Main(string[] args)
         {
-            using (EngineIOServer server = new EngineIOServer(1009))
+            using (EngineIOServer server = new EngineIOServer(1009, 30000000, 30000000))
             {
                 Console.WriteLine("Listening on " + server.Port);
 

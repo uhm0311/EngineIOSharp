@@ -1,13 +1,13 @@
 ﻿using EngineIOSharp.Common.Packet;
-using System.Threading;
-using Timer = System.Timers.Timer;
+using SimpleThreadMonitor;
+using System.Timers;
 
 namespace EngineIOSharp.Client
 {
     partial class EngineIOClient
     {
-        private readonly object PingMutex = new object();
-        private readonly object PongMutex = new object();
+        private readonly object PingMutex = "PingMutex";
+        private readonly object PongMutex = "PongMutex";
 
         private Timer PingTimer = null;
         private Timer PongTimer = null;
@@ -16,40 +16,38 @@ namespace EngineIOSharp.Client
 
         private void StartPing()
         {
-            Monitor.Enter(PingMutex);
+            SimpleMutex.Lock(PingMutex, () =>
             {
                 if (PingTimer == null)
                 {
                     PingTimer = new Timer(1000);
                     PingTimer.Elapsed += (sender, e) =>
                     {
-                        Monitor.Enter(PingMutex);
+                        SimpleMutex.Lock(PingMutex, () =>
                         {
                             PingTimer.Interval = PingInterval;
 
                             Send(EngineIOPacket.CreatePingPacket());
                             StartPong();
-                        }
-                        Monitor.Exit(PingMutex);
+                        }, OnEngineIOError);
                     };
 
                     PingTimer.AutoReset = true;
                     PingTimer.Start();
                 }
-            }
-            Monitor.Exit(PingMutex);
+            }, OnEngineIOError);
         }
 
         private void StartPong()
         {
-            Monitor.Enter(PongMutex);
+            SimpleMutex.Lock(PongMutex, () =>
             {
                 if (PongTimer == null)
                 {
                     PongTimer = new Timer(PingTimeout);
                     PongTimer.Elapsed += (sender, e) =>
                     {
-                        Monitor.Enter(PongMutex);
+                        SimpleMutex.Lock(PongMutex, () =>
                         {
                             if (Pong > 0)
                             {
@@ -59,8 +57,7 @@ namespace EngineIOSharp.Client
                             {
                                 Close();
                             }
-                        }
-                        Monitor.Exit(PongMutex);
+                        }, OnEngineIOError);
                     };
 
                     PongTimer.AutoReset = false;
@@ -70,25 +67,22 @@ namespace EngineIOSharp.Client
                 {
                     PongTimer.Start();
                 }
-            }
-            Monitor.Exit(PongMutex);
+            }, OnEngineIOError);
         }
 
         private void StopHeartbeat()
         {
-            Monitor.Enter(PingMutex);
+            SimpleMutex.Lock(PingMutex, () =>
             {
                 PingTimer?.Stop();
                 PingTimer = null;
-            }
-            Monitor.Exit(PingMutex);
+            }, OnEngineIOError);
 
-            Monitor.Enter(PongMutex);
+            SimpleMutex.Lock(PongMutex, () =>
             {
                 PongTimer?.Stop();
                 PongTimer = null;
-            }
-            Monitor.Exit(PongMutex);
+            }, OnEngineIOError);
         }
     }
 }

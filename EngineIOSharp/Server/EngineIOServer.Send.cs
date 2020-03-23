@@ -1,5 +1,5 @@
 ﻿using EngineIOSharp.Client;
-using System.Threading;
+using SimpleThreadMonitor;
 
 namespace EngineIOSharp.Server
 {
@@ -9,14 +9,13 @@ namespace EngineIOSharp.Server
         {
             if (!string.IsNullOrEmpty(Data))
             {
-                Monitor.Enter(ClientMutex);
+                SimpleMutex.Lock(ClientMutex, () =>
                 {
                     foreach (EngineIOClient Client in ClientList)
                     {
                         Client.Send(Data);
                     }
-                }
-                Monitor.Exit(ClientMutex);
+                });
             }
         }
 
@@ -24,14 +23,13 @@ namespace EngineIOSharp.Server
         {
             if ((RawData?.Length ?? 0) > 0)
             {
-                Monitor.Enter(ClientMutex);
+                SimpleMutex.Lock(ClientMutex, () =>
                 {
                     foreach (EngineIOClient Client in ClientList)
                     {
                         Client.Send(RawData);
                     }
-                }
-                Monitor.Exit(ClientMutex);
+                });
             }
         }
     }

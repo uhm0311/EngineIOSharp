@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Client.Event;
+using EngineIOSharp.Common;
 using EngineIOSharp.Common.Packet;
 using System;
 
@@ -24,31 +25,38 @@ namespace EngineIOSharp.Client
 
         internal void Send(EngineIOPacket Packet, Action Callback = null)
         {
-            if (IsAlive && Packet != null)
+            try
             {
-                if (Packet.IsText)
+                if (IsAlive && Packet != null)
                 {
-                    WebSocketClient.Send(Packet.Encode() as string);
-                }
-                else if (Packet.IsBinary)
-                {
-                    WebSocketClient.Send(Packet.Encode() as byte[]);
-                }
-
-                if (Packet.IsText || Packet.IsBinary)
-                {
-                    Callback?.Invoke();
-                    CallEventHandler(EngineIOClientEvent.FLUSH);
-
-                    if (Packet.Type == EngineIOPacketType.PING)
+                    if (Packet.IsText)
                     {
-                        CallEventHandler(EngineIOClientEvent.PING_SEND);
+                        WebSocketClient.Send(Packet.Encode() as string);
                     }
-                    else if (Packet.Type == EngineIOPacketType.PONG)
+                    else if (Packet.IsBinary)
                     {
-                        CallEventHandler(EngineIOClientEvent.PONG_SEND);
+                        WebSocketClient.Send(Packet.Encode() as byte[]);
+                    }
+
+                    if (Packet.IsText || Packet.IsBinary)
+                    {
+                        Callback?.Invoke();
+                        CallEventHandler(EngineIOClientEvent.FLUSH);
+
+                        if (Packet.Type == EngineIOPacketType.PING)
+                        {
+                            CallEventHandler(EngineIOClientEvent.PING_SEND);
+                        }
+                        else if (Packet.Type == EngineIOPacketType.PONG)
+                        {
+                            CallEventHandler(EngineIOClientEvent.PONG_SEND);
+                        }
                     }
                 }
+            }
+            catch (Exception Exception)
+            {
+                OnEngineIOError(new EngineIOException("Failed to send packet. " + Packet, Exception));
             }
         }
     }

@@ -1,6 +1,6 @@
 ﻿using EngineIOSharp.Common.Enum;
+using SimpleThreadMonitor;
 using System;
-using System.Threading;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
@@ -10,7 +10,7 @@ namespace EngineIOSharp.Client
     {
         private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
 
-        private readonly object ClientMutex = new object();
+        private readonly object ClientMutex = "ClientMutex";
 
         public WebSocket WebSocketClient { get; private set; }
 
@@ -81,23 +81,18 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            Monitor.Enter(ClientMutex);
-            {
-                WebSocketClient.Connect();
-            }
-            Monitor.Exit(ClientMutex);
+            SimpleMutex.Lock(ClientMutex, WebSocketClient.Connect, OnEngineIOError);
         }
 
         public void Close()
         {
-            Monitor.Enter(ClientMutex);
+            SimpleMutex.Lock(ClientMutex, () =>
             {
                 WebSocketClient?.Close();
-                Initialize();
-
                 StopHeartbeat();
-            }
-            Monitor.Exit(ClientMutex);
+
+                Initialize();
+            }, OnEngineIOError);
         }
 
         public void Dispose()

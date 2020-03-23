@@ -1,20 +1,20 @@
 ﻿using EngineIOSharp.Client;
 using EngineIOSharp.Server.Event;
+using SimpleThreadMonitor;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace EngineIOSharp.Server
 {
     partial class EngineIOServer
     {
         private readonly ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>> EventHandlers = new ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>>();
-        private readonly object EventHandlersMutex = new object();
+        private readonly object EventHandlersMutex = "EventHandlersMutex";
 
         public void On(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && Callback != null)
                 {
@@ -25,25 +25,23 @@ namespace EngineIOSharp.Server
 
                     EventHandlers[Event].Add(Callback);
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            });
         }
 
         public void Off(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && Callback != null && EventHandlers.ContainsKey(Event))
                 {
                     EventHandlers[Event].Remove(Callback);
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            });
         }
 
         private void CallEventHandler(EngineIOServerEvent Event, EngineIOClient Client)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && EventHandlers.ContainsKey(Event))
                 {
@@ -52,8 +50,7 @@ namespace EngineIOSharp.Server
                         Callback?.Invoke(Client);
                     }
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            });
         }
     }
 }

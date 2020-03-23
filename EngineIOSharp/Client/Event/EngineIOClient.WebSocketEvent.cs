@@ -21,11 +21,15 @@ namespace EngineIOSharp.Client
                 AutoReconnectionCount++;
                 Connect();
             }
+            else
+            {
+                StopHeartbeat();
+            }
         }
 
         private void OnWebsocketError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            CallEventHandler(EngineIOClientEvent.ERROR, EngineIOPacket.CreateErrorPacket(e.Message, e.Exception));
+            OnEngineIOError(e.Exception);
         }
 
         private void OnWebsocketMessage(object sender, WebSocketSharp.MessageEventArgs e)

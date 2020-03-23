@@ -24,9 +24,9 @@ namespace EngineIOSharp.Common.Packet
             };
         }
 
-        internal static EngineIOPacket CreateErrorPacket(string Data, Exception Exception)
+        internal static EngineIOPacket CreateErrorPacket(Exception Exception)
         {
-            Data = (Data ?? string.Empty) + Exception;
+            string Data = Exception.ToString();
 
             return new EngineIOPacket()
             {

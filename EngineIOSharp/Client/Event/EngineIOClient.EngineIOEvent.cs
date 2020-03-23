@@ -1,17 +1,18 @@
 ﻿using EngineIOSharp.Client.Event;
+using EngineIOSharp.Common;
 using EngineIOSharp.Common.Packet;
 using Newtonsoft.Json.Linq;
+using SimpleThreadMonitor;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
 
 namespace EngineIOSharp.Client
 {
     partial class EngineIOClient
     {
         private readonly ConcurrentDictionary<EngineIOClientEvent, List<Delegate>> EventHandlers = new ConcurrentDictionary<EngineIOClientEvent, List<Delegate>>();
-        private readonly object EventHandlersMutex = new object();
+        private readonly object EventHandlersMutex = "EventHandlersMutex";
 
         public void On(EngineIOClientEvent Event, Action Callback)
         {
@@ -35,7 +36,7 @@ namespace EngineIOSharp.Client
 
         private void On(EngineIOClientEvent Event, Delegate Callback)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && Callback != null)
                 {
@@ -46,59 +47,64 @@ namespace EngineIOSharp.Client
 
                     EventHandlers[Event].Add(Callback);
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            }, OnEngineIOError);
         }
 
         private void Off(EngineIOClientEvent Event, Delegate Callback)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && Callback != null && EventHandlers.ContainsKey(Event))
                 {
                     EventHandlers[Event].Remove(Callback);
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            }, OnEngineIOError);
         }
 
         private void HandleEngineIOPacket(EngineIOPacket Packet)
         {
-            if (Packet != null)
+            try
             {
-                switch (Packet.Type)
+                if (Packet != null)
                 {
-                    case EngineIOPacketType.OPEN:
-                        JObject JsonData = JObject.Parse(Packet.Data);
+                    switch (Packet.Type)
+                    {
+                        case EngineIOPacketType.OPEN:
+                            JObject JsonData = JObject.Parse(Packet.Data);
 
-                        SocketID = JsonData["sid"].ToString();
-                        PingInterval = int.Parse(JsonData["pingInterval"].ToString());
-                        PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
+                            SocketID = JsonData["sid"].ToString();
+                            PingInterval = int.Parse(JsonData["pingInterval"].ToString());
+                            PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
 
-                        StartPing();
-                        CallEventHandler(EngineIOClientEvent.OPEN);
-                        break;
+                            StartPing();
+                            CallEventHandler(EngineIOClientEvent.OPEN);
+                            break;
 
-                    case EngineIOPacketType.CLOSE:
-                        Close();
-                        break;
+                        case EngineIOPacketType.CLOSE:
+                            Close();
+                            break;
 
-                    case EngineIOPacketType.PING:
-                        Send(EngineIOPacket.CreatePongPacket());
+                        case EngineIOPacketType.PING:
+                            Send(EngineIOPacket.CreatePongPacket());
 
-                        CallEventHandler(EngineIOClientEvent.PING_RECEIVE);
-                        break;
+                            CallEventHandler(EngineIOClientEvent.PING_RECEIVE);
+                            break;
 
-                    case EngineIOPacketType.PONG:
-                        Pong++;
+                        case EngineIOPacketType.PONG:
+                            Pong++;
 
-                        CallEventHandler(EngineIOClientEvent.PONG_RECEIVE);
-                        break;
+                            CallEventHandler(EngineIOClientEvent.PONG_RECEIVE);
+                            break;
 
-                    case EngineIOPacketType.MESSAGE:
-                        CallEventHandler(EngineIOClientEvent.MESSAGE, Packet);
-                        break;
+                        case EngineIOPacketType.MESSAGE:
+                            CallEventHandler(EngineIOClientEvent.MESSAGE, Packet);
+                            break;
+                    }
                 }
+            }
+            catch (Exception Exception)
+            {
+                OnEngineIOError(new EngineIOException("Failed to handle packet. " + Packet, Exception));
             }
         }
 
@@ -117,7 +123,7 @@ namespace EngineIOSharp.Client
 
         private void CallEventHandler(EngineIOClientEvent Event, EngineIOPacket Packet = null)
         {
-            Monitor.Enter(EventHandlersMutex);
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
                 if (Event != null && EventHandlers.ContainsKey(Event))
                 {
@@ -133,8 +139,12 @@ namespace EngineIOSharp.Client
                         }
                     }
                 }
-            }
-            Monitor.Exit(EventHandlersMutex);
+            }, (Exception) => { if (!Event.Equals(EngineIOClientEvent.ERROR)) { OnEngineIOError(Exception); } }, true);
+        }
+
+        private void OnEngineIOError(Exception Exception)
+        {
+            CallEventHandler(EngineIOClientEvent.ERROR, EngineIOPacket.CreateErrorPacket(Exception));
         }
     }
 }
