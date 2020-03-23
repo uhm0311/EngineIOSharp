@@ -1,5 +1,4 @@
 ﻿using EngineIOSharp.Common;
-using EngineIOSharp.Common.Action;
 using EngineIOSharp.Common.Packet;
 using Newtonsoft.Json.Linq;
 using System;
@@ -17,7 +16,7 @@ namespace EngineIOSharp.Client
             On(Event, Callback as Delegate);
         }
 
-        public void On(EngineIOEvent Event, EngineIOAction Callback)
+        public void On(EngineIOEvent Event, Action<EngineIOPacket> Callback)
         {
             On(Event, Callback as Delegate);
         }
@@ -27,7 +26,7 @@ namespace EngineIOSharp.Client
             Off(Event, Callback as Delegate);
         }
 
-        public void Off(EngineIOEvent Event, EngineIOAction Callback)
+        public void Off(EngineIOEvent Event, Action<EngineIOPacket> Callback)
         {
             Off(Event, Callback as Delegate);
         }
@@ -116,9 +115,9 @@ namespace EngineIOSharp.Client
                     {
                         (EventHandler as Action).Invoke();
                     }
-                    else if (EventHandler is EngineIOAction)
+                    else if (EventHandler is Action<EngineIOPacket>)
                     {
-                        (EventHandler as EngineIOAction).Invoke(Packet);
+                        (EventHandler as Action<EngineIOPacket>).Invoke(Packet);
                     }
                 }
             }

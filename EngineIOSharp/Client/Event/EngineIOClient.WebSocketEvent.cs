@@ -29,7 +29,7 @@ namespace EngineIOSharp.Client
 
         private void OnWebsocketError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
-            CallEventHandler(EngineIOEvent.ERROR, EngineIOPacket.CreateErrorPacket(e.Message));
+            CallEventHandler(EngineIOEvent.ERROR, EngineIOPacket.CreateErrorPacket(e.Message, e.Exception));
         }
 
         private void OnWebsocketMessage(object sender, WebSocketSharp.MessageEventArgs e)

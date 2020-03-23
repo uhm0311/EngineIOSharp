@@ -24,8 +24,10 @@ namespace EngineIOSharp.Common.Packet
             };
         }
 
-        internal static EngineIOPacket CreateErrorPacket(string Data)
+        internal static EngineIOPacket CreateErrorPacket(string Data, Exception Exception)
         {
+            Data = (Data ?? string.Empty) + Exception;
+
             return new EngineIOPacket()
             {
                 IsText = true,

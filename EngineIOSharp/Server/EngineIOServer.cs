@@ -20,12 +20,12 @@ namespace EngineIOSharp.Server
 
         public bool IsListening
         {
-            get { return WebSocketServer?.IsListening ?? false; }
+            get { return WebSocketServer.IsListening; }
         }
 
         public bool IsSecure
         {
-            get { return WebSocketServer?.IsSecure ?? IsWebSocketSecure; }
+            get { return WebSocketServer.IsSecure; }
         }
 
         private bool IsWebSocketSecure = false;
@@ -48,33 +48,38 @@ namespace EngineIOSharp.Server
 
             this.PingInterval = PingInterval;
             this.PingTimeout = PingTimeout;
+
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
+
+            WebSocketServer.Log.Output = (_, __) => { };
+            WebSocketServer.AddWebSocketService("/engine.io/", () => new WebSocketEvent
+            (
+                PingInterval,
+                PingTimeout,
+                SocketIDList,
+                ClientList,
+                ClientMutex,
+                ConnectionEventHandlers,
+                ConnectionEventHandlersMutex,
+                StartHeartbeat,
+                StopHeartbeat,
+                HandleEngineIOPacket
+            ));
         }
 
         public void Start()
         {
             lock (ServerMutex)
             {
-                if (WebSocketServer == null)
+                if (!IsListening)
                 {
-                    WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
-                    WebSocketServer.Log.Output = (_, __) => { };
+                    WebSocketServer.Start();
                 }
-
-                WebSocketServer.AddWebSocketService("/engine.io/", () => new WebSocketEvent
-                (
-                    PingInterval,
-                    PingTimeout,
-                    SocketIDList,
-                    ClientList,
-                    ClientMutex,
-                    ConnectionEventHandlers,
-                    ConnectionEventHandlersMutex,
-                    StartHeartbeat,
-                    StopHeartbeat,
-                    HandleEngineIOPacket
-                ));
-
-                WebSocketServer.Start();
             }
         }
 
@@ -82,8 +87,19 @@ namespace EngineIOSharp.Server
         {
             lock (ServerMutex)
             {
-                WebSocketServer?.Stop();
-                WebSocketServer = null;
+                if (IsListening)
+                {
+                    lock (ClientMutex)
+                    {
+                        foreach (EngineIOClient Client in ClientList.Values)
+                        {
+                            Client.Close();
+                        }
+
+                        WebSocketServer.Stop();
+                        Initialize();
+                    }
+                }
             }
         }
     }

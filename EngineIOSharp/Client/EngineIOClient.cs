@@ -7,7 +7,9 @@ namespace EngineIOSharp.Client
 {
     public partial class EngineIOClient : EngineIOConnection
     {
-        private readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+
+        private readonly object ClientMutex = new object();
 
         public WebSocket WebSocketClient { get; private set; }
 
@@ -42,7 +44,7 @@ namespace EngineIOSharp.Client
 
         internal EngineIOClient(WebSocketContext Context)
         {
-            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.UserEndPoint.Address, Context.UserEndPoint.Port);
+            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.ServerEndPoint.Address, Context.ServerEndPoint.Port);
             AutoReconnect = 0;
 
             Initialize(Context.WebSocket);
@@ -58,13 +60,13 @@ namespace EngineIOSharp.Client
 
         private void Initialize(WebSocket Client)
         {
-            this.WebSocketClient = Client;
-            this.WebSocketClient.Log.Output = (_, __) => { };
+            WebSocketClient = Client;
+            WebSocketClient.Log.Output = (_, __) => { };
 
-            Client.OnOpen += OnWebsocketOpen;
-            Client.OnClose += OnWebsocketClose;
-            Client.OnMessage += OnWebsocketMessage;
-            Client.OnError += OnWebsocketError;
+            WebSocketClient.OnOpen += OnWebsocketOpen;
+            WebSocketClient.OnClose += OnWebsocketClose;
+            WebSocketClient.OnMessage += OnWebsocketMessage;
+            WebSocketClient.OnError += OnWebsocketError;
         }
 
         private void Initialize()
@@ -74,20 +76,21 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            if (WebSocketClient == null)
+            lock (ClientMutex)
             {
-                Initialize();
+                WebSocketClient.Connect();
             }
-
-            WebSocketClient.Connect();
         }
 
         public override void Close()
         {
-            WebSocketClient?.Close();
-            WebSocketClient = null;
+            lock (ClientMutex)
+            {
+                WebSocketClient?.Close();
+                Initialize();
 
-            StopHeartbeat();
+                StopHeartbeat();
+            }
         }
 
         public override bool Equals(object o)
