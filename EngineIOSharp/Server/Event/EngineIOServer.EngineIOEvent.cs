@@ -1,57 +1,56 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Common.Packet;
+using EngineIOSharp.Server.Event;
+using SimpleThreadMonitor;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 
 namespace EngineIOSharp.Server
 {
     partial class EngineIOServer
     {
-        private readonly List<Action<EngineIOClient>> ConnectionEventHandlers = new List<Action<EngineIOClient>>();
-        private readonly object ConnectionEventHandlersMutex = new object();
+        private readonly ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>> EventHandlers = new ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>>();
+        private readonly object EventHandlersMutex = "EventHandlersMutex";
 
-        public void OnConnection(Action<EngineIOClient> Callback)
+        public void On(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {
-            lock (ConnectionEventHandlersMutex)
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
-                if (Callback != null)
+                if (Event != null && Callback != null)
                 {
-                    ConnectionEventHandlers.Add(Callback);
+                    if (!EventHandlers.ContainsKey(Event))
+                    {
+                        EventHandlers.TryAdd(Event, new List<Action<EngineIOClient>>());
+                    }
+
+                    EventHandlers[Event].Add(Callback);
                 }
-            }
+            });
         }
 
-        public void OffConnection(Action<EngineIOClient> Callback)
+        public void Off(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {
-            lock (ConnectionEventHandlersMutex)
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
-                if (Callback != null)
+                if (Event != null && Callback != null && EventHandlers.ContainsKey(Event))
                 {
-                    ConnectionEventHandlers.Remove(Callback);
+                    EventHandlers[Event].Remove(Callback);
                 }
-            }
+            });
         }
 
-        private void HandleEngineIOPacket(EngineIOClient Client, EngineIOPacket Packet)
+        private void CallEventHandler(EngineIOServerEvent Event, EngineIOClient Client)
         {
-            if (Packet != null)
+            SimpleMutex.Lock(EventHandlersMutex, () =>
             {
-                switch (Packet.Type)
+                if (Event != null && EventHandlers.ContainsKey(Event))
                 {
-                    case EngineIOPacketType.PING:
-                        lock (ClientMutex)
-                        {
-                            if (!Heartbeat.ContainsKey(Client))
-                            {
-                                Heartbeat.TryAdd(Client, 0);
-                            }
-
-                            Heartbeat[Client]++;
-                            Client?.Send(EngineIOPacket.CreatePongPacket());
-                        }
-                        break;
+                    foreach (Action<EngineIOClient> Callback in EventHandlers[Event])
+                    {
+                        Callback?.Invoke(Client);
+                    }
                 }
-            }
+            });
         }
     }
 }

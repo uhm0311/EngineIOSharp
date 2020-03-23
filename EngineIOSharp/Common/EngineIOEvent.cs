@@ -1,10 +1,10 @@
 ﻿namespace EngineIOSharp.Common
 {
-    public class EngineIOEvent
+    public abstract class EngineIOEvent<T> where T : EngineIOEvent<T>
     {
         public string Data { get; private set; }
 
-        private EngineIOEvent(string Data)
+        protected EngineIOEvent(string Data) 
         {
             this.Data = Data;
         }
@@ -16,21 +16,12 @@
 
         public override bool Equals(object obj)
         {
-            return obj is EngineIOEvent && ToString().Equals(obj.ToString());
+            return obj is T && obj.ToString().Equals(ToString());
         }
 
         public override int GetHashCode()
         {
             return ToString().GetHashCode();
         }
-
-        public static readonly EngineIOEvent OPEN = new EngineIOEvent("open");
-        public static readonly EngineIOEvent CLOSE = new EngineIOEvent("close");
-        public static readonly EngineIOEvent MESSAGE = new EngineIOEvent("message");
-        public static readonly EngineIOEvent ERROR = new EngineIOEvent("error");
-
-        public static readonly EngineIOEvent FLUSH = new EngineIOEvent("flush");
-        public static readonly EngineIOEvent PING = new EngineIOEvent("ping");
-        public static readonly EngineIOEvent PONG = new EngineIOEvent("pong");
     }
 }

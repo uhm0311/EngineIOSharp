@@ -1,10 +1,9 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Client.Event;
+using EngineIOSharp.Common.Packet;
+using SimpleThreadMonitor;
 using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 
 namespace EngineIOSharp.Server
@@ -22,24 +21,45 @@ namespace EngineIOSharp.Server
             {
                 if (!HeartbeatTimer.ContainsKey(Client))
                 {
-                    Timer TempTimer = new Timer(PingInterval + PingTimeout);
-                    TempTimer.Elapsed += (sender, e) =>
+                    Client.On(EngineIOClientEvent.PING_SEND, () =>
                     {
-                        LockHeartbeat(Client, () =>
+                        SimpleMutex.Lock(ClientMutex, () =>
                         {
                             if (!Heartbeat.ContainsKey(Client))
                             {
                                 Heartbeat.TryAdd(Client, 0);
                             }
 
-                            if (Heartbeat[Client] > 0)
+                            Heartbeat[Client]++;
+                            Client?.Send(EngineIOPacket.CreatePongPacket());
+                        });
+                    });
+
+                    Client.On(EngineIOClientEvent.CLOSE, () =>
+                    {
+                        SimpleMutex.Lock(ClientMutex, () =>
+                        {
+                            ClientList.Remove(Client);
+                            StopHeartbeat(Client);
+                        });
+                    });
+
+                    Timer TempTimer = new Timer(PingInterval + PingTimeout);
+                    TempTimer.Elapsed += (sender, e) =>
+                    {
+                        SimpleMutex.Lock(ClientMutex, () =>
+                        {
+                            LockHeartbeat(Client, () =>
                             {
-                                Heartbeat[Client] = 0;
-                            }
-                            else
-                            {
-                                Client?.Close();
-                            }
+                                if (Heartbeat.ContainsKey(Client) && Heartbeat[Client] > 0)
+                                {
+                                    Heartbeat[Client] = 0;
+                                }
+                                else
+                                {
+                                    Client?.Close();
+                                }
+                            });
                         });
                     };
 
@@ -57,31 +77,26 @@ namespace EngineIOSharp.Server
             {
                 if (HeartbeatTimer.ContainsKey(Client))
                 {
-                    HeartbeatMutex.TryRemove(Client, out object _);
                     HeartbeatTimer.TryRemove(Client, out Timer TempTimer);
                     Heartbeat.TryRemove(Client, out ulong __);
 
                     TempTimer.Stop();
                 }
             });
+
+            HeartbeatMutex.TryRemove(Client, out object _);
         }
 
-        private void LockHeartbeat(EngineIOClient Client, Action Callback)
+        private void LockHeartbeat(EngineIOClient Client, Action Process)
         {
-            lock (ClientMutex)
+            if (Client != null)
             {
-                if (Client != null)
+                if (!HeartbeatMutex.ContainsKey(Client))
                 {
-                    if (!HeartbeatMutex.ContainsKey(Client))
-                    {
-                        HeartbeatMutex.TryAdd(Client, new object());
-                    }
-
-                    lock (HeartbeatMutex[Client])
-                    {
-                        Callback?.Invoke();
-                    }
+                    HeartbeatMutex.TryAdd(Client, new object());
                 }
+
+                SimpleMutex.Lock(HeartbeatMutex[Client], Process);
             }
         }
     }

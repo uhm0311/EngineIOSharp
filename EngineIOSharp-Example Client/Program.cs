@@ -1,5 +1,5 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Common;
+using EngineIOSharp.Client.Event;
 using EngineIOSharp.Common.Enum;
 using System;
 
@@ -9,36 +9,33 @@ namespace EngineIOSharp.Example.Client
     {
         static void Main(string[] args)
         {
-            EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009);
-
-            client.On(EngineIOEvent.OPEN, () =>
+            using (EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009))
             {
-                Console.WriteLine("Conencted!");
-            });
+                client.On(EngineIOClientEvent.OPEN, () =>
+                {
+                    Console.WriteLine("Conencted!");
+                });
 
-            client.On(EngineIOEvent.MESSAGE, (Packet) =>
-            {
-                Console.WriteLine("Echo : " + Packet.Data);
-            });
+                client.On(EngineIOClientEvent.MESSAGE, (Packet) =>
+                {
+                    Console.WriteLine("Server : " + Packet.Data);
+                });
 
-            client.On(EngineIOEvent.CLOSE, () =>
-            {
-                Console.WriteLine("Disconnected!");
-            });
+                client.On(EngineIOClientEvent.CLOSE, () =>
+                {
+                    Console.WriteLine("Disconnected!");
+                });
 
-            client.Connect();
-            Console.WriteLine("Input /exit to close connection.");
+                client.Connect();
 
-            string line;
-            while (!(line = Console.ReadLine()).Equals("/exit"))
-            {
-                client.Send(line);
+                Console.WriteLine("Input /exit to close program.");
+                string line;
+
+                while (!(line = Console.ReadLine())?.Trim()?.ToLower()?.Equals("/exit") ?? false)
+                {
+                    client.Send(line);
+                }
             }
-
-            client.Close();
-
-            Console.WriteLine("Press any key to continue...");
-            Console.Read();
         }
     }
 }

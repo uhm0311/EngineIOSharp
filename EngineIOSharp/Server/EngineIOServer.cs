@@ -1,90 +1,108 @@
-﻿using EngineIOSharp.Abstract;
-using EngineIOSharp.Client;
-using System.Linq;
+﻿using EngineIOSharp.Client;
+using SimpleThreadMonitor;
+using System;
 using System.Net;
+using WebSocketSharp;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
 {
-    public partial class EngineIOServer : EngineIOConnection
+    public partial class EngineIOServer : IDisposable
     {
-        private readonly object ServerMutex = new object();
+        public const string DefaultServerPath = "/engine.io/";
+        private readonly object ServerMutex = "ServerMutex";
 
         public WebSocketServer WebSocketServer { get; private set; }
 
-        public EngineIOClient[] Clients { get { return ClientList.Values.ToArray(); } }
-        public int ClientsCount { get { return ClientList.Values.Count; } }
+        public int PingInterval { get; private set; }
+        public int PingTimeout { get; private set; }
+
+        public EngineIOClient[] Clients { get { return ClientList.ToArray(); } }
+        public int ClientsCount { get { return ClientList.Count; } }
 
         public IPAddress IPAddress { get; private set; }
         public int Port { get; private set; }
 
         public bool IsListening
         {
-            get { return WebSocketServer?.IsListening ?? false; }
+            get { return WebSocketServer.IsListening; }
         }
 
         public bool IsSecure
         {
-            get { return WebSocketServer?.IsSecure ?? IsWebSocketSecure; }
+            get { return WebSocketServer.IsSecure; }
         }
 
         private bool IsWebSocketSecure = false;
+        private string ServerPath = DefaultServerPath;
 
-        public EngineIOServer(int Port, bool IsSecure = false, int PingInterval = 25000, int PingTimeout = 5000)
+        public EngineIOServer(int Port, int PingInterval = 25000, int PingTimeout = 5000, bool IsSecure = false, string ServerPath = DefaultServerPath)
         {
-            Initialize(IPAddress.Any, Port, IsSecure, PingInterval, PingTimeout);
+            Initialize(IPAddress.Any, Port, PingInterval, PingTimeout, IsSecure, ServerPath);
         }
 
-        public EngineIOServer(IPAddress IPAddress, int Port, bool IsSecure = false, int PingInterval = 25000, int PingTimeout = 5000)
+        public EngineIOServer(IPAddress IPAddress, int Port, int PingInterval = 25000, int PingTimeout = 5000, bool IsSecure = false, string ServerPath = DefaultServerPath)
         {
-            Initialize(IPAddress, Port, IsSecure, PingInterval, PingTimeout);
+            Initialize(IPAddress, Port, PingInterval, PingTimeout, IsSecure, ServerPath);
         }
 
-        private void Initialize(IPAddress IPAddress, int Port, bool IsSecure, int PingInterval, int PingTimeout)
+        private void Initialize(IPAddress IPAddress, int Port, int PingInterval, int PingTimeout, bool IsSecure, string ServerPath)
         {
             this.IPAddress = IPAddress;
             this.Port = Port;
+
             IsWebSocketSecure = IsSecure;
+            this.ServerPath = ServerPath;
 
             this.PingInterval = PingInterval;
             this.PingTimeout = PingTimeout;
+
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            Action<LogData, string> LogOutput = WebSocketServer?.Log?.Output ?? ((_, __) => { });
+            WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
+
+            WebSocketServer.Log.Output = LogOutput;
+            WebSocketServer.AddWebSocketService(ServerPath, CreateBehavior);
         }
 
         public void Start()
         {
-            lock (ServerMutex)
+            SimpleMutex.Lock(ServerMutex, () =>
             {
-                if (WebSocketServer == null)
+                if (!IsListening)
                 {
-                    WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
-                    WebSocketServer.Log.Output = (_, __) => { };
+                    WebSocketServer.Start();
                 }
-
-                WebSocketServer.AddWebSocketService("/engine.io/", () => new WebSocketEvent
-                (
-                    PingInterval,
-                    PingTimeout,
-                    SocketIDList,
-                    ClientList,
-                    ClientMutex,
-                    ConnectionEventHandlers,
-                    ConnectionEventHandlersMutex,
-                    StartHeartbeat,
-                    StopHeartbeat,
-                    HandleEngineIOPacket
-                ));
-
-                WebSocketServer.Start();
-            }
+            });
         }
 
-        public override void Close()
+        public void Close()
         {
-            lock (ServerMutex)
+            SimpleMutex.Lock(ServerMutex, () =>
             {
-                WebSocketServer?.Stop();
-                WebSocketServer = null;
-            }
+                if (IsListening)
+                {
+                    SimpleMutex.Lock(ClientMutex, () =>
+                    {
+                        foreach (EngineIOClient Client in ClientList)
+                        {
+                            Client.Close();
+                        }
+                    });
+
+                    WebSocketServer.Stop();
+                    Initialize();
+                }
+            });
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
     }
 }

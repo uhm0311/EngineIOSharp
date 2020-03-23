@@ -1,15 +1,21 @@
-﻿using EngineIOSharp.Abstract;
-using EngineIOSharp.Common.Enum;
+﻿using EngineIOSharp.Common.Enum;
+using SimpleThreadMonitor;
+using System;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
 namespace EngineIOSharp.Client
 {
-    public partial class EngineIOClient : EngineIOConnection
+    public partial class EngineIOClient : IDisposable
     {
-        private readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+
+        private readonly object ClientMutex = "ClientMutex";
 
         public WebSocket WebSocketClient { get; private set; }
+
+        public int PingInterval { get; private set; }
+        public int PingTimeout { get; private set; }
 
         public string SocketID { get; private set; }
         public string URI { get; private set; }
@@ -42,7 +48,7 @@ namespace EngineIOSharp.Client
 
         internal EngineIOClient(WebSocketContext Context)
         {
-            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.UserEndPoint.Address, Context.UserEndPoint.Port);
+            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.ServerEndPoint.Address, Context.ServerEndPoint.Port);
             AutoReconnect = 0;
 
             Initialize(Context.WebSocket);
@@ -58,13 +64,14 @@ namespace EngineIOSharp.Client
 
         private void Initialize(WebSocket Client)
         {
-            this.WebSocketClient = Client;
-            this.WebSocketClient.Log.Output = (_, __) => { };
+            Action<LogData, string> LogOutput = WebSocketClient?.Log?.Output ?? ((_, __) => { });
+            WebSocketClient = Client;
 
-            Client.OnOpen += OnWebsocketOpen;
-            Client.OnClose += OnWebsocketClose;
-            Client.OnMessage += OnWebsocketMessage;
-            Client.OnError += OnWebsocketError;
+            WebSocketClient.Log.Output = LogOutput;
+            WebSocketClient.OnOpen += OnWebsocketOpen;
+            WebSocketClient.OnClose += OnWebsocketClose;
+            WebSocketClient.OnMessage += OnWebsocketMessage;
+            WebSocketClient.OnError += OnWebsocketError;
         }
 
         private void Initialize()
@@ -74,20 +81,23 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            if (WebSocketClient == null)
-            {
-                Initialize();
-            }
-
-            WebSocketClient.Connect();
+            SimpleMutex.Lock(ClientMutex, WebSocketClient.Connect, OnEngineIOError);
         }
 
-        public override void Close()
+        public void Close()
         {
-            WebSocketClient?.Close();
-            WebSocketClient = null;
+            SimpleMutex.Lock(ClientMutex, () =>
+            {
+                WebSocketClient?.Close();
+                StopHeartbeat();
 
-            StopHeartbeat();
+                Initialize();
+            }, OnEngineIOError);
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
 
         public override bool Equals(object o)
