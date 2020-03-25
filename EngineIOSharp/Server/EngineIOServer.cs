@@ -95,7 +95,6 @@ namespace EngineIOSharp.Server
                     });
 
                     WebSocketServer.Stop();
-                    Initialize();
                 }
             });
         }

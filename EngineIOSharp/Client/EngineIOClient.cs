@@ -25,7 +25,7 @@ namespace EngineIOSharp.Client
         {
             get
             {
-                return WebSocketClient?.IsAlive ?? false;
+                return WebSocketClient.IsAlive;
             }
         }
 
@@ -83,17 +83,24 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            SimpleMutex.Lock(ClientMutex, WebSocketClient.Connect, OnEngineIOError);
+            SimpleMutex.Lock(ClientMutex, () =>
+            {
+                if (!IsAlive)
+                {
+                    WebSocketClient.Connect();
+                }
+            }, OnEngineIOError);
         }
 
         public void Close()
         {
             SimpleMutex.Lock(ClientMutex, () =>
             {
-                WebSocketClient?.Close();
-                StopHeartbeat();
-
-                Initialize();
+                if (IsAlive)
+                {
+                    WebSocketClient.Close();
+                    StopHeartbeat();
+                }
             }, OnEngineIOError);
         }
 
