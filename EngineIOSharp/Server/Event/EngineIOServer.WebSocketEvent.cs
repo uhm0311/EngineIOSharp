@@ -6,6 +6,7 @@ using EngineIOSharp.Server.Event;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
+using WebSocketSharp.Net.WebSockets;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
@@ -13,30 +14,21 @@ namespace EngineIOSharp.Server
     partial class EngineIOServer
     {
         private readonly List<EngineIOClient> ClientList = new List<EngineIOClient>();
-        private readonly object ClientMutex = "ClientMutex";
+        private readonly object ClientMutex = new object();
 
         private EngineIOBehavior CreateBehavior()
         {
-            return new EngineIOBehavior((EngineIOClient Client) =>
+            return new EngineIOBehavior((WebSocketContext Context) =>
             {
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
+                    string SID = Context.QueryString["sid"] ?? EngineIOSocketID.Generate();
+                    EngineIOClient Client = new EngineIOClient(Context, SID);
+
+                    Context.WebSocket.OnMessage += (sender, e) => HandleEngineIOPacket(Client, EngineIOPacket.Decode(e));
+
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
-                        Client.On(EngineIOClientEvent.PING_SEND, () =>
-                        {
-                            SimpleMutex.Lock(ClientMutex, () =>
-                            {
-                                if (!Heartbeat.ContainsKey(Client))
-                                {
-                                    Heartbeat.TryAdd(Client, 0);
-                                }
-
-                                Heartbeat[Client]++;
-                                Client?.Send(EngineIOPacket.CreatePongPacket());
-                            });
-                        });
-
                         Client.On(EngineIOClientEvent.CLOSE, () =>
                         {
                             SimpleMutex.Lock(ClientMutex, () =>
@@ -46,7 +38,15 @@ namespace EngineIOSharp.Server
                             });
                         });
 
-                        Client.Send(EngineIOPacket.CreateOpenPacket(Client.SID, PingInterval, PingTimeout));
+                        if (string.IsNullOrWhiteSpace(Context.QueryString["sid"]))
+                        {
+                            Client.Send(EngineIOPacket.CreateOpenPacket(Client.SID, PingInterval, PingTimeout));
+                        }
+                        else if (!SIDList.Contains(SID))
+                        {
+
+                        }
+
                         ClientList.Add(Client);
 
                         StartHeartbeat(Client);
@@ -58,9 +58,9 @@ namespace EngineIOSharp.Server
 
         private class EngineIOBehavior : WebSocketBehavior
         {
-            private readonly Action<EngineIOClient> Initializer;
+            private readonly Action<WebSocketContext> Initializer;
 
-            internal EngineIOBehavior(Action<EngineIOClient> Initializer)
+            internal EngineIOBehavior(Action<WebSocketContext> Initializer)
             {
                 this.Initializer = Initializer;
             }
@@ -69,7 +69,7 @@ namespace EngineIOSharp.Server
             {
                 if (ID != null && Sessions[ID]?.Context != null)
                 {
-                    Initializer(new EngineIOClient(Sessions[ID].Context, Yeast.Key()));
+                    Initializer(Sessions[ID].Context);
                 }
             }
         }

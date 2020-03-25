@@ -12,7 +12,7 @@ namespace EngineIOSharp.Client
     partial class EngineIOClient
     {
         private readonly ConcurrentDictionary<EngineIOClientEvent, List<Delegate>> EventHandlers = new ConcurrentDictionary<EngineIOClientEvent, List<Delegate>>();
-        private readonly object EventHandlersMutex = "EventHandlersMutex";
+        private readonly object EventHandlersMutex = new object();
 
         public void On(EngineIOClientEvent Event, Action Callback)
         {
@@ -85,7 +85,7 @@ namespace EngineIOSharp.Client
                             break;
 
                         case EngineIOPacketType.PING:
-                            Send(EngineIOPacket.CreatePongPacket());
+                            Send(EngineIOPacket.CreatePongPacket(Packet.Data));
 
                             CallEventHandler(EngineIOClientEvent.PING_RECEIVE);
                             break;

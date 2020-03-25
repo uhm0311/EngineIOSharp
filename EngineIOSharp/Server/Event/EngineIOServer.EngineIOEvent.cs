@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Server.Event;
 using SimpleThreadMonitor;
 using System;
@@ -10,7 +11,7 @@ namespace EngineIOSharp.Server
     partial class EngineIOServer
     {
         private readonly ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>> EventHandlers = new ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>>();
-        private readonly object EventHandlersMutex = "EventHandlersMutex";
+        private readonly object EventHandlersMutex = new object();
 
         public void On(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {
@@ -48,6 +49,22 @@ namespace EngineIOSharp.Server
                     foreach (Action<EngineIOClient> Callback in EventHandlers[Event])
                     {
                         Callback?.Invoke(Client);
+                    }
+                }
+            });
+        }
+
+        private void HandleEngineIOPacket(EngineIOClient Client, EngineIOPacket Packet)
+        {
+            SimpleMutex.Lock(ClientMutex, () =>
+            {
+                if (Client != null && Packet != null)
+                {
+                    switch (Packet.Type)
+                    {
+                        case EngineIOPacketType.UPGRADE:
+                            SIDList.Remove(Client.SID);
+                            break;
                     }
                 }
             });

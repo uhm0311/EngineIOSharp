@@ -8,9 +8,9 @@ namespace EngineIOSharp.Client
 {
     public partial class EngineIOClient : IDisposable
     {
-        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=4&transport=websocket";
 
-        private readonly object ClientMutex = "ClientMutex";
+        private readonly object ClientMutex = new object();
 
         public WebSocket WebSocketClient { get; private set; }
 
@@ -29,16 +29,9 @@ namespace EngineIOSharp.Client
             }
         }
 
-        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, string SID = null, uint AutoReconnect = 0) 
+        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, uint AutoReconnect = 0) 
         {
-            string URI = string.Format(URIFormat, Scheme, Host, Port);
-
-            if (!string.IsNullOrWhiteSpace(SID))
-            {
-                URI += string.Format("&sid={0}", this.SID = SID);
-            }
-
-            Initialize(URI, AutoReconnect);
+            Initialize(string.Format(URIFormat, Scheme, Host, Port), AutoReconnect);
         }
 
         public EngineIOClient(string URI, uint AutoReconnect = 0)
@@ -50,7 +43,7 @@ namespace EngineIOSharp.Client
         {
             this.SID = SID;
 
-            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.ServerEndPoint.Address, Context.ServerEndPoint.Port);
+            URI = Context.RequestUri.ToString();
             AutoReconnect = 0;
 
             Initialize(Context.WebSocket);
@@ -70,10 +63,10 @@ namespace EngineIOSharp.Client
             WebSocketClient = Client;
 
             WebSocketClient.Log.Output = LogOutput;
-            WebSocketClient.OnOpen += OnWebsocketOpen;
-            WebSocketClient.OnClose += OnWebsocketClose;
-            WebSocketClient.OnMessage += OnWebsocketMessage;
-            WebSocketClient.OnError += OnWebsocketError;
+            WebSocketClient.OnOpen += OnWebSocketOpen;
+            WebSocketClient.OnClose += OnWebSocketClose;
+            WebSocketClient.OnMessage += OnWebSocketMessage;
+            WebSocketClient.OnError += OnWebSocketError;
         }
 
         private void Initialize()

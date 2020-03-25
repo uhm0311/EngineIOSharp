@@ -8,11 +8,11 @@ namespace EngineIOSharp.Client
     {
         private int AutoReconnectionCount = 0;
 
-        private void OnWebsocketOpen(object sender, EventArgs e)
+        private void OnWebSocketOpen(object sender, EventArgs e)
         {
         }
 
-        private void OnWebsocketClose(object sender, WebSocketSharp.CloseEventArgs e)
+        private void OnWebSocketClose(object sender, WebSocketSharp.CloseEventArgs e)
         {
             CallEventHandler(EngineIOClientEvent.CLOSE);
 
@@ -27,12 +27,12 @@ namespace EngineIOSharp.Client
             }
         }
 
-        private void OnWebsocketError(object sender, WebSocketSharp.ErrorEventArgs e)
+        private void OnWebSocketError(object sender, WebSocketSharp.ErrorEventArgs e)
         {
             OnEngineIOError(e.Exception);
         }
 
-        private void OnWebsocketMessage(object sender, WebSocketSharp.MessageEventArgs e)
+        private void OnWebSocketMessage(object sender, WebSocketSharp.MessageEventArgs e)
         {
             HandleEngineIOPacket(EngineIOPacket.Decode(e));
         }

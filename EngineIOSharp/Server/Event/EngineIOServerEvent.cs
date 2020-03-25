@@ -1,8 +1,8 @@
-﻿using EngineIOSharp.Common;
+﻿using EngineIOSharp.Common.Type.Abstract;
 
 namespace EngineIOSharp.Server.Event
 {
-    public class EngineIOServerEvent : EngineIOEvent<EngineIOServerEvent>
+    public class EngineIOServerEvent : EngineIOType<EngineIOServerEvent, string>
     {
         private EngineIOServerEvent(string Data) : base(Data) { }
 
