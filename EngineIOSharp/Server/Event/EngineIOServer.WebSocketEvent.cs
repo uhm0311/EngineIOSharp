@@ -23,7 +23,7 @@ namespace EngineIOSharp.Server
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
                     string SID = Context.QueryString["sid"] ?? EngineIOSocketID.Generate();
-                    EngineIOClient Client = new EngineIOClient(Context, SID, this, CreateHttpWebRequest(Context));
+                    EngineIOClient Client = new EngineIOClient(Context, SID, this, HttpManager.CreateHttpWebRequest(Context));
 
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
