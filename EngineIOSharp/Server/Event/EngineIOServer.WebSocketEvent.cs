@@ -1,4 +1,6 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Client.Event;
+using EngineIOSharp.Common;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Server.Event;
 using SimpleThreadMonitor;
@@ -15,13 +17,36 @@ namespace EngineIOSharp.Server
 
         private EngineIOBehavior CreateBehavior()
         {
-            return new EngineIOBehavior((EngineIOClient Client, string SocketID) =>
+            return new EngineIOBehavior((EngineIOClient Client) =>
             {
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
-                        Client.Send(EngineIOPacket.CreateOpenPacket(SocketID, PingInterval, PingTimeout));
+                        Client.On(EngineIOClientEvent.PING_SEND, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                if (!Heartbeat.ContainsKey(Client))
+                                {
+                                    Heartbeat.TryAdd(Client, 0);
+                                }
+
+                                Heartbeat[Client]++;
+                                Client?.Send(EngineIOPacket.CreatePongPacket());
+                            });
+                        });
+
+                        Client.On(EngineIOClientEvent.CLOSE, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                ClientList.Remove(Client);
+                                StopHeartbeat(Client);
+                            });
+                        });
+
+                        Client.Send(EngineIOPacket.CreateOpenPacket(Client.SID, PingInterval, PingTimeout));
                         ClientList.Add(Client);
 
                         StartHeartbeat(Client);
@@ -33,9 +58,9 @@ namespace EngineIOSharp.Server
 
         private class EngineIOBehavior : WebSocketBehavior
         {
-            private readonly Action<EngineIOClient, string> Initializer;
+            private readonly Action<EngineIOClient> Initializer;
 
-            internal EngineIOBehavior(Action<EngineIOClient, string> Initializer)
+            internal EngineIOBehavior(Action<EngineIOClient> Initializer)
             {
                 this.Initializer = Initializer;
             }
@@ -44,7 +69,7 @@ namespace EngineIOSharp.Server
             {
                 if (ID != null && Sessions[ID]?.Context != null)
                 {
-                    Initializer(new EngineIOClient(Sessions[ID].Context), ID);
+                    Initializer(new EngineIOClient(Sessions[ID].Context, Yeast.Key()));
                 }
             }
         }

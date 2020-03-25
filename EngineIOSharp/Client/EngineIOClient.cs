@@ -17,7 +17,7 @@ namespace EngineIOSharp.Client
         public int PingInterval { get; private set; }
         public int PingTimeout { get; private set; }
 
-        public string SocketID { get; private set; }
+        public string SID { get; private set; }
         public string URI { get; private set; }
 
         public uint AutoReconnect { get; set; }
@@ -29,13 +29,13 @@ namespace EngineIOSharp.Client
             }
         }
 
-        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, string SocketID = null, uint AutoReconnect = 0) 
+        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, string SID = null, uint AutoReconnect = 0) 
         {
             string URI = string.Format(URIFormat, Scheme, Host, Port);
 
-            if (!string.IsNullOrWhiteSpace(SocketID))
+            if (!string.IsNullOrWhiteSpace(SID))
             {
-                URI += string.Format("&sid={0}", SocketID);
+                URI += string.Format("&sid={0}", this.SID = SID);
             }
 
             Initialize(URI, AutoReconnect);
@@ -46,8 +46,10 @@ namespace EngineIOSharp.Client
             Initialize(URI, AutoReconnect);
         }
 
-        internal EngineIOClient(WebSocketContext Context)
+        internal EngineIOClient(WebSocketContext Context, string SID)
         {
+            this.SID = SID;
+
             URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.ServerEndPoint.Address, Context.ServerEndPoint.Port);
             AutoReconnect = 0;
 
@@ -114,7 +116,7 @@ namespace EngineIOSharp.Client
 
         public override int GetHashCode()
         {
-            return SocketID?.GetHashCode() ?? base.GetHashCode();
+            return SID?.GetHashCode() ?? base.GetHashCode();
         }
     }
 }

@@ -1,6 +1,4 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Client.Event;
-using EngineIOSharp.Common.Packet;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Concurrent;
@@ -21,29 +19,6 @@ namespace EngineIOSharp.Server
             {
                 if (!HeartbeatTimer.ContainsKey(Client))
                 {
-                    Client.On(EngineIOClientEvent.PING_SEND, () =>
-                    {
-                        SimpleMutex.Lock(ClientMutex, () =>
-                        {
-                            if (!Heartbeat.ContainsKey(Client))
-                            {
-                                Heartbeat.TryAdd(Client, 0);
-                            }
-
-                            Heartbeat[Client]++;
-                            Client?.Send(EngineIOPacket.CreatePongPacket());
-                        });
-                    });
-
-                    Client.On(EngineIOClientEvent.CLOSE, () =>
-                    {
-                        SimpleMutex.Lock(ClientMutex, () =>
-                        {
-                            ClientList.Remove(Client);
-                            StopHeartbeat(Client);
-                        });
-                    });
-
                     Timer TempTimer = new Timer(PingInterval + PingTimeout);
                     TempTimer.Elapsed += (sender, e) =>
                     {

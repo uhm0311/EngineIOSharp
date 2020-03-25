@@ -72,7 +72,7 @@ namespace EngineIOSharp.Client
                         case EngineIOPacketType.OPEN:
                             JObject JsonData = JObject.Parse(Packet.Data);
 
-                            SocketID = JsonData["sid"].ToString();
+                            SID = JsonData["sid"].ToString();
                             PingInterval = int.Parse(JsonData["pingInterval"].ToString());
                             PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
 
@@ -112,7 +112,7 @@ namespace EngineIOSharp.Client
         {
             if (JsonData != null)
             {
-                SocketID = JsonData["sid"].ToString();
+                SID = JsonData["sid"].ToString();
                 PingInterval = int.Parse(JsonData["pingInterval"].ToString());
                 PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
 
