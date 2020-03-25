@@ -99,6 +99,10 @@ namespace EngineIOSharp.Client
                         case EngineIOPacketType.MESSAGE:
                             CallEventHandler(EngineIOClientEvent.MESSAGE, Packet);
                             break;
+
+                        case EngineIOPacketType.UPGRADE:
+                            Upgraded = true;
+                            break;
                     }
                 }
             }

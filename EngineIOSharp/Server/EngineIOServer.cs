@@ -67,14 +67,7 @@ namespace EngineIOSharp.Server
 
             HttpServer.Log.Output = LogOutput;
             HttpServer.OnGet += OnHttpRequest;
-            HttpServer.OnConnect += OnHttpRequest;
-            HttpServer.OnDelete += OnHttpRequest;
-            HttpServer.OnHead += OnHttpRequest;
-            HttpServer.OnOptions += OnHttpRequest;
-            HttpServer.OnPatch += OnHttpRequest;
             HttpServer.OnPost += OnHttpRequest;
-            HttpServer.OnPut += OnHttpRequest;
-            HttpServer.OnTrace += OnHttpRequest;
             HttpServer.AddWebSocketService(ServerPath, CreateBehavior);
         }
 
@@ -99,7 +92,7 @@ namespace EngineIOSharp.Server
                     {
                         foreach (EngineIOClient Client in ClientList)
                         {
-                            Client.Close();
+                            Client?.Close();
                         }
                     });
 

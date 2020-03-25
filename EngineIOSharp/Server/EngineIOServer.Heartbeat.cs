@@ -19,29 +19,36 @@ namespace EngineIOSharp.Server
             {
                 if (!HeartbeatTimer.ContainsKey(Client))
                 {
-                    Timer TempTimer = new Timer(PingInterval + PingTimeout);
-                    TempTimer.Elapsed += (sender, e) =>
+                    Timer PingTimer = new Timer(PingInterval);
+                    PingTimer.Elapsed += (sender, e) =>
                     {
-                        SimpleMutex.Lock(ClientMutex, () =>
+                        Timer PongTimer = new Timer(PingTimeout * 1.25);
+                        PongTimer.Elapsed += (sender2, e2) =>
                         {
-                            LockHeartbeat(Client, () =>
+                            SimpleMutex.Lock(ClientMutex, () =>
                             {
-                                if (Heartbeat.ContainsKey(Client) && Heartbeat[Client] > 0)
+                                LockHeartbeat(Client, () =>
                                 {
-                                    Heartbeat[Client] = 0;
-                                }
-                                else
-                                {
-                                    Client?.Close();
-                                }
+                                    if (Heartbeat.ContainsKey(Client) && Heartbeat[Client] > 0)
+                                    {
+                                        Heartbeat[Client] = 0;
+                                    }
+                                    else
+                                    {
+                                        Client.Close();
+                                    }
+                                });
                             });
-                        });
+                        };
+
+                        PongTimer.AutoReset = false;
+                        PongTimer.Start();
                     };
 
-                    TempTimer.AutoReset = true;
-                    TempTimer.Start();
+                    PingTimer.AutoReset = true;
+                    PingTimer.Start();
 
-                    HeartbeatTimer.TryAdd(Client, TempTimer);
+                    HeartbeatTimer.TryAdd(Client, PingTimer);
                 }
             });
         }
@@ -52,10 +59,10 @@ namespace EngineIOSharp.Server
             {
                 if (HeartbeatTimer.ContainsKey(Client))
                 {
-                    HeartbeatTimer.TryRemove(Client, out Timer TempTimer);
+                    HeartbeatTimer.TryRemove(Client, out Timer PingTimer);
                     Heartbeat.TryRemove(Client, out ulong __);
 
-                    TempTimer.Stop();
+                    PingTimer.Stop();
                 }
             });
 

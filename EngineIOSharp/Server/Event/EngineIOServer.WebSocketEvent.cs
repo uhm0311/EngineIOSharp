@@ -23,9 +23,7 @@ namespace EngineIOSharp.Server
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
                     string SID = Context.QueryString["sid"] ?? EngineIOSocketID.Generate();
-                    EngineIOClient Client = new EngineIOClient(Context, SID);
-
-                    Context.WebSocket.OnMessage += (sender, e) => HandleEngineIOPacket(Client, EngineIOPacket.Decode(e));
+                    EngineIOClient Client = new EngineIOClient(Context, SID, this, CreateHttpWebRequest(Context));
 
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
@@ -33,8 +31,39 @@ namespace EngineIOSharp.Server
                         {
                             SimpleMutex.Lock(ClientMutex, () =>
                             {
-                                ClientList.Remove(Client);
-                                StopHeartbeat(Client);
+                                if (Client != null)
+                                {
+                                    ClientList.Remove(Client);
+                                    StopHeartbeat(Client);
+                                }
+                            });
+                        });
+
+                        Client.On(EngineIOClientEvent.UPGRADE, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                if (SIDList.Remove(Client.SID))
+                                {
+                                    HttpRequests.TryRemove(Client.SID, out _);
+                                }
+                            });
+                        });
+
+                        Client.On(EngineIOClientEvent.PONG_SEND, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                LockHeartbeat(Client, () =>
+                                {
+                                    if (!Heartbeat.ContainsKey(Client))
+                                    {
+                                        Heartbeat.TryAdd(Client, 0);
+                                    }
+
+                                    Heartbeat[Client]++;
+
+                                });
                             });
                         });
 

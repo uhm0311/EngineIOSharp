@@ -1,6 +1,8 @@
 ﻿using EngineIOSharp.Common.Enum;
+using EngineIOSharp.Server;
 using SimpleThreadMonitor;
 using System;
+using System.Net;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
@@ -13,12 +15,10 @@ namespace EngineIOSharp.Client
         private readonly object ClientMutex = new object();
 
         public WebSocket WebSocketClient { get; private set; }
+        public string URI { get; private set; }
 
         public int PingInterval { get; private set; }
         public int PingTimeout { get; private set; }
-
-        public string SID { get; private set; }
-        public string URI { get; private set; }
 
         public uint AutoReconnect { get; set; }
         public bool IsAlive
@@ -28,6 +28,11 @@ namespace EngineIOSharp.Client
                 return WebSocketClient.IsAlive;
             }
         }
+
+        public string SID { get; private set; }
+        public EngineIOServer Server { get; private set; }
+        public HttpWebRequest Request { get; private set; }
+        public bool Upgraded { get; private set; }
 
         public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, uint AutoReconnect = 0) 
         {
@@ -39,9 +44,11 @@ namespace EngineIOSharp.Client
             Initialize(URI, AutoReconnect);
         }
 
-        internal EngineIOClient(WebSocketContext Context, string SID)
+        internal EngineIOClient(WebSocketContext Context, string SID, EngineIOServer Server, HttpWebRequest Request)
         {
             this.SID = SID;
+            this.Server = Server;
+            this.Request = Request;
 
             URI = Context.RequestUri.ToString();
             AutoReconnect = 0;

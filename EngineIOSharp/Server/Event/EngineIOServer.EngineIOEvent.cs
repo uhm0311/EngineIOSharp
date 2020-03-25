@@ -1,5 +1,4 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Server.Event;
 using SimpleThreadMonitor;
 using System;
@@ -49,22 +48,6 @@ namespace EngineIOSharp.Server
                     foreach (Action<EngineIOClient> Callback in EventHandlers[Event])
                     {
                         Callback?.Invoke(Client);
-                    }
-                }
-            });
-        }
-
-        private void HandleEngineIOPacket(EngineIOClient Client, EngineIOPacket Packet)
-        {
-            SimpleMutex.Lock(ClientMutex, () =>
-            {
-                if (Client != null && Packet != null)
-                {
-                    switch (Packet.Type)
-                    {
-                        case EngineIOPacketType.UPGRADE:
-                            SIDList.Remove(Client.SID);
-                            break;
                     }
                 }
             });

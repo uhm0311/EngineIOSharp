@@ -19,6 +19,20 @@ http.listen(port, function() {
 		socket.on('close', function() { 
 			console.log('Client disconnected!');
 		});
+
+		socket.on('flush', function (packet) {
+			console.log('Client flushed!');
+			console.log(packet);
+		});
+
+		socket.on('drain', function () {
+			console.log('Client drained!');
+		});
+
+		socket.on('packetCreate', function (packet) {
+			console.log('Client packetCreate!');
+			console.log(packet);
+		});
 	});
 	
 	server.on('connection', function (socket) {	
