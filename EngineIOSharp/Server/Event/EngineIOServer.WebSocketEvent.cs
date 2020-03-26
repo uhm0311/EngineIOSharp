@@ -23,7 +23,7 @@ namespace EngineIOSharp.Server
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
                     string SID = Context.QueryString["sid"] ?? EngineIOSocketID.Generate();
-                    EngineIOClient Client = new EngineIOClient(Context, SID, this, HttpManager.CreateHttpWebRequest(Context));
+                    EngineIOClient Client = new EngineIOClient(Context, SID);
 
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
@@ -43,42 +43,37 @@ namespace EngineIOSharp.Server
                         {
                             SimpleMutex.Lock(ClientMutex, () =>
                             {
-                                if (SIDList.Remove(Client.SID))
-                                {
-                                    HttpRequests.TryRemove(Client.SID, out _);
-                                }
+                                SIDList.Remove(Client.SID);
                             });
                         });
 
-                        Client.On(EngineIOClientEvent.PONG_SEND, () =>
+                        Client.On(EngineIOClientEvent.FLUSH, (Packet) =>
                         {
-                            SimpleMutex.Lock(ClientMutex, () =>
+                            if (Packet.Type == EngineIOPacketType.PONG)
                             {
-                                LockHeartbeat(Client, () =>
+                                SimpleMutex.Lock(ClientMutex, () =>
                                 {
-                                    if (!Heartbeat.ContainsKey(Client))
+                                    LockHeartbeat(Client, () =>
                                     {
-                                        Heartbeat.TryAdd(Client, 0);
-                                    }
+                                        if (!Heartbeat.ContainsKey(Client))
+                                        {
+                                            Heartbeat.TryAdd(Client, 0);
+                                        }
 
-                                    Heartbeat[Client]++;
-
+                                        Heartbeat[Client]++;
+                                    });
                                 });
-                            });
+                            }
                         });
 
-                        if (string.IsNullOrWhiteSpace(Context.QueryString["sid"]))
+                        if (!SIDList.Contains(SID))
                         {
                             Client.Send(EngineIOPacket.CreateOpenPacket(Client.SID, PingInterval, PingTimeout));
                         }
-                        else if (!SIDList.Contains(SID))
-                        {
-
-                        }
 
                         ClientList.Add(Client);
-
                         StartHeartbeat(Client);
+
                         CallEventHandler(EngineIOServerEvent.CONNECTION, Client);
                     }
                 });

@@ -27,7 +27,9 @@ namespace EngineIOSharp.Client
         {
             try
             {
-                if (IsAlive && Packet != null)
+                CallEventHandler(EngineIOClientEvent.PACKET_CREATE, Packet);
+
+                if (IsAlive && Packet != null && (Packet.IsText || Packet.IsBinary))
                 {
                     if (Packet.IsText)
                     {
@@ -38,20 +40,10 @@ namespace EngineIOSharp.Client
                         WebSocketClient.Send(Packet.Encode() as byte[]);
                     }
 
-                    if (Packet.IsText || Packet.IsBinary)
-                    {
-                        Callback?.Invoke();
-                        CallEventHandler(EngineIOClientEvent.FLUSH);
+                    CallEventHandler(EngineIOClientEvent.FLUSH, Packet);
+                    CallEventHandler(EngineIOClientEvent.DRAIN);
 
-                        if (Packet.Type == EngineIOPacketType.PING)
-                        {
-                            CallEventHandler(EngineIOClientEvent.PING_SEND);
-                        }
-                        else if (Packet.Type == EngineIOPacketType.PONG)
-                        {
-                            CallEventHandler(EngineIOClientEvent.PONG_SEND);
-                        }
-                    }
+                    Callback?.Invoke();
                 }
             }
             catch (Exception Exception)

@@ -3,18 +3,15 @@ using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Type;
 using Newtonsoft.Json.Linq;
 using SimpleThreadMonitor;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
 using WebSocketSharp.Net;
-using WebSocketSharp.Net.WebSockets;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
 {
     partial class EngineIOServer
     {
-        private readonly ConcurrentDictionary<string, System.Net.HttpWebRequest> HttpRequests = new ConcurrentDictionary<string, System.Net.HttpWebRequest>();
         private readonly List<string> SIDList = new List<string>();
 
         private void OnHttpRequest(object sender, HttpRequestEventArgs e)
@@ -37,41 +34,29 @@ namespace EngineIOSharp.Server
                             {
                                 StringBuilder ResponseBody = new StringBuilder();
 
-                                if (Method.Equals("get") /* TODO || Transport.Equals(ClientList[SID].Transport.Name)*/)
+                                if (Method.Equals("get"))
                                 {
-                                    if (Method.Equals("get"))
+                                    if (!SIDList.Contains(SID))
                                     {
-                                        if (!SIDList.Contains(SID))
-                                        {
-                                            HttpRequests.TryAdd(SID, HttpManager.CreateHttpWebRequest(e.Request));
-                                            SIDList.Add(SID);
+                                        SIDList.Add(SID);
 
-                                            ResponseBody.Append('0');
-                                            ResponseBody.Append(new JObject()
-                                            {
-                                                ["sid"] = SID,
-                                                ["upgrades"] = new JArray() { "websocket" },
-                                                ["pingInterval"] = PingInterval,
-                                                ["pingTimeout"] = PingTimeout,
-                                            }.ToString().Replace("\r", "").Replace("\n", "").Replace("\t", "").Replace(" ", "").Trim());
-                                        }
-                                        else
+                                        ResponseBody.Append('0');
+                                        ResponseBody.Append(new JObject()
                                         {
-                                            ResponseBody.Append((int)EngineIOPacketType.NOOP);
-                                        }
+                                            ["sid"] = SID,
+                                            ["upgrades"] = new JArray() { "websocket" },
+                                            ["pingInterval"] = PingInterval,
+                                            ["pingTimeout"] = PingTimeout,
+                                        }.ToString().Replace("\r", "").Replace("\n", "").Replace("\t", "").Replace(" ", "").Trim());
                                     }
                                     else
                                     {
-                                        // TODO process polling request data.
+                                        ResponseBody.Append((int)EngineIOPacketType.NOOP);
                                     }
+                                }
 
-                                    ResponseBody.Insert(0, string.Format("{0}:", Encoding.UTF8.GetByteCount(ResponseBody.ToString())));
-                                    HttpManager.SendOKResponse(e.Response, SID, ResponseBody.ToString());
-                                }
-                                else
-                                {
-                                    HttpManager.SendErrorResponse(e.Response, EngineIOErrorType.BAD_REQUEST);
-                                }
+                                ResponseBody.Insert(0, string.Format("{0}:", Encoding.UTF8.GetByteCount(ResponseBody.ToString())));
+                                HttpManager.SendOKResponse(e.Response, SID, ResponseBody.ToString());
                             }
                             else
                             {
@@ -168,46 +153,6 @@ namespace EngineIOSharp.Server
                     Response.OutputStream.Close();
                     Response.Close();
                 }
-            }
-
-            public static System.Net.HttpWebRequest CreateHttpWebRequest(WebSocketContext Context)
-            {
-                string Scheme = Context.RequestUri.Scheme;
-                string RequestUri = Context.RequestUri.ToString();
-
-                if (Scheme.Equals("wss"))
-                {
-                    RequestUri = RequestUri.Replace(Scheme, "https");
-                }
-                else
-                {
-                    RequestUri = RequestUri.Replace(Scheme, "http");
-                }
-
-                System.Net.HttpWebRequest WebRequest = System.Net.WebRequest.Create(RequestUri) as System.Net.HttpWebRequest;
-                WebRequest.KeepAlive = false;
-
-                foreach (string Key in Context.Headers.AllKeys)
-                {
-                    try { WebRequest.Headers[Key] = Context.Headers[Key]; }
-                    catch { }
-                }
-
-                return WebRequest;
-            }
-
-            public static System.Net.HttpWebRequest CreateHttpWebRequest(HttpListenerRequest ListenerRequest)
-            {
-                System.Net.HttpWebRequest WebRequest = System.Net.WebRequest.Create(ListenerRequest.Url) as System.Net.HttpWebRequest;
-                WebRequest.KeepAlive = false;
-
-                foreach (string Key in ListenerRequest.Headers.AllKeys)
-                {
-                    try { WebRequest.Headers[Key] = ListenerRequest.Headers[Key]; }
-                    catch { }
-                }
-
-                return WebRequest;
             }
 
             public static bool IsValidHeader(string Header)

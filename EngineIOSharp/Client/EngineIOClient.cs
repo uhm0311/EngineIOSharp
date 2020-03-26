@@ -10,7 +10,7 @@ namespace EngineIOSharp.Client
 {
     public partial class EngineIOClient : IDisposable
     {
-        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=4&transport=websocket";
+        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
 
         private readonly object ClientMutex = new object();
 
@@ -30,9 +30,6 @@ namespace EngineIOSharp.Client
         }
 
         public string SID { get; private set; }
-        public EngineIOServer Server { get; private set; }
-        public HttpWebRequest Request { get; private set; }
-        public bool Upgraded { get; private set; }
 
         public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, uint AutoReconnect = 0) 
         {
@@ -44,11 +41,9 @@ namespace EngineIOSharp.Client
             Initialize(URI, AutoReconnect);
         }
 
-        internal EngineIOClient(WebSocketContext Context, string SID, EngineIOServer Server, HttpWebRequest Request)
+        internal EngineIOClient(WebSocketContext Context, string SID)
         {
             this.SID = SID;
-            this.Server = Server;
-            this.Request = Request;
 
             URI = Context.RequestUri.ToString();
             AutoReconnect = 0;

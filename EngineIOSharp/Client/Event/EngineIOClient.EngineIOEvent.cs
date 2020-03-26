@@ -67,6 +67,8 @@ namespace EngineIOSharp.Client
             {
                 if (Packet != null)
                 {
+                    CallEventHandler(EngineIOClientEvent.PACKET, Packet);
+
                     switch (Packet.Type)
                     {
                         case EngineIOPacketType.OPEN:
@@ -86,14 +88,10 @@ namespace EngineIOSharp.Client
 
                         case EngineIOPacketType.PING:
                             Send(EngineIOPacket.CreatePongPacket(Packet.Data));
-
-                            CallEventHandler(EngineIOClientEvent.PING_RECEIVE);
                             break;
 
                         case EngineIOPacketType.PONG:
                             Pong++;
-
-                            CallEventHandler(EngineIOClientEvent.PONG_RECEIVE);
                             break;
 
                         case EngineIOPacketType.MESSAGE:
@@ -101,7 +99,7 @@ namespace EngineIOSharp.Client
                             break;
 
                         case EngineIOPacketType.UPGRADE:
-                            Upgraded = true;
+                            CallEventHandler(EngineIOClientEvent.UPGRADE);
                             break;
                     }
                 }

@@ -12,12 +12,11 @@ namespace EngineIOSharp.Client.Event
         public static readonly EngineIOClientEvent UPGRADE = new EngineIOClientEvent("upgrade");
 
         public static readonly EngineIOClientEvent ERROR = new EngineIOClientEvent("error");
+
+        public static readonly EngineIOClientEvent DRAIN = new EngineIOClientEvent("drain");
         public static readonly EngineIOClientEvent FLUSH = new EngineIOClientEvent("flush");
 
-        public static readonly EngineIOClientEvent PING_SEND = new EngineIOClientEvent("pingSend");
-        public static readonly EngineIOClientEvent PING_RECEIVE = new EngineIOClientEvent("pingReceive");
-
-        public static readonly EngineIOClientEvent PONG_SEND = new EngineIOClientEvent("pongSend");
-        public static readonly EngineIOClientEvent PONG_RECEIVE = new EngineIOClientEvent("pongReceive");
+        public static readonly EngineIOClientEvent PACKET = new EngineIOClientEvent("packet");
+        public static readonly EngineIOClientEvent PACKET_CREATE = new EngineIOClientEvent("packetCreate");
     }
 }
