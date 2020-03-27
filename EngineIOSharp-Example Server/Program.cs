@@ -1,15 +1,10 @@
-﻿using EngineIOSharp.Client.Event;
-using EngineIOSharp.Server;
-using EngineIOSharp.Server.Event;
-using System;
-
-namespace EngineIOSharp.Example.Server
+﻿namespace EngineIOSharp.Example.Server
 {
     class Program
     {
         static void Main(string[] args)
         {
-            using (EngineIOServer server = new EngineIOServer(1009))
+            /*using (EngineIOServer server = new EngineIOServer(1009))
             {
                 Console.WriteLine("Listening on " + server.Port);
 
@@ -38,7 +33,7 @@ namespace EngineIOSharp.Example.Server
                 {
                     server.Broadcast(line);
                 }
-            }
+            }*/
         }
     }
 }

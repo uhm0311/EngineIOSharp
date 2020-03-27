@@ -1,15 +1,10 @@
-﻿using EngineIOSharp.Client;
-using EngineIOSharp.Client.Event;
-using EngineIOSharp.Common.Enum;
-using System;
-
-namespace EngineIOSharp.Example.Client
+﻿namespace EngineIOSharp.Example.Client
 {
     class Program
     {
         static void Main(string[] args)
         {
-            using (EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009))
+            /*using (EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009))
             {
                 client.On(EngineIOClientEvent.OPEN, () =>
                 {
@@ -35,7 +30,7 @@ namespace EngineIOSharp.Example.Client
                 {
                     client.Send(line);
                 }
-            }
+            }*/
         }
     }
 }
