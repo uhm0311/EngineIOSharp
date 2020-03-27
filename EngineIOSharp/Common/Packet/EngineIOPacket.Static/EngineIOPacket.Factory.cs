@@ -15,17 +15,23 @@ namespace EngineIOSharp.Common.Packet
             };
         }
 
-        internal static EngineIOPacket CreatePongPacket()
+        internal static EngineIOPacket CreatePongPacket(string Data = null)
         {
+            Data = Data ?? string.Empty;
+
             return new EngineIOPacket()
             {
                 Type = EngineIOPacketType.PONG,
-                IsText = true
+                IsText = true,
+                Data = Data,
+                RawData = Encoding.UTF8.GetBytes(Data)
             };
         }
 
-        internal static EngineIOPacket CreateErrorPacket(string Data)
+        internal static EngineIOPacket CreateErrorPacket(Exception Exception)
         {
+            string Data = Exception.ToString();
+
             return new EngineIOPacket()
             {
                 IsText = true,

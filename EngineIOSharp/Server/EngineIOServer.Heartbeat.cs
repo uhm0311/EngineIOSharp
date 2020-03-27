@@ -1,10 +1,7 @@
 ﻿using EngineIOSharp.Client;
+using SimpleThreadMonitor;
 using System;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Timers;
 
 namespace EngineIOSharp.Server
@@ -22,31 +19,36 @@ namespace EngineIOSharp.Server
             {
                 if (!HeartbeatTimer.ContainsKey(Client))
                 {
-                    Timer TempTimer = new Timer(PingInterval + PingTimeout);
-                    TempTimer.Elapsed += (sender, e) =>
+                    Timer PingTimer = new Timer(PingInterval);
+                    PingTimer.Elapsed += (sender, e) =>
                     {
-                        LockHeartbeat(Client, () =>
+                        Timer PongTimer = new Timer(PingTimeout * 1.25);
+                        PongTimer.Elapsed += (sender2, e2) =>
                         {
-                            if (!Heartbeat.ContainsKey(Client))
+                            SimpleMutex.Lock(ClientMutex, () =>
                             {
-                                Heartbeat.TryAdd(Client, 0);
-                            }
+                                LockHeartbeat(Client, () =>
+                                {
+                                    if (Heartbeat.ContainsKey(Client) && Heartbeat[Client] > 0)
+                                    {
+                                        Heartbeat[Client] = 0;
+                                    }
+                                    else
+                                    {
+                                        Client.Close();
+                                    }
+                                });
+                            });
+                        };
 
-                            if (Heartbeat[Client] > 0)
-                            {
-                                Heartbeat[Client] = 0;
-                            }
-                            else
-                            {
-                                Client?.Close();
-                            }
-                        });
+                        PongTimer.AutoReset = false;
+                        PongTimer.Start();
                     };
 
-                    TempTimer.AutoReset = true;
-                    TempTimer.Start();
+                    PingTimer.AutoReset = true;
+                    PingTimer.Start();
 
-                    HeartbeatTimer.TryAdd(Client, TempTimer);
+                    HeartbeatTimer.TryAdd(Client, PingTimer);
                 }
             });
         }
@@ -57,31 +59,26 @@ namespace EngineIOSharp.Server
             {
                 if (HeartbeatTimer.ContainsKey(Client))
                 {
-                    HeartbeatMutex.TryRemove(Client, out object _);
-                    HeartbeatTimer.TryRemove(Client, out Timer TempTimer);
+                    HeartbeatTimer.TryRemove(Client, out Timer PingTimer);
                     Heartbeat.TryRemove(Client, out ulong __);
 
-                    TempTimer.Stop();
+                    PingTimer.Stop();
                 }
             });
+
+            HeartbeatMutex.TryRemove(Client, out object _);
         }
 
-        private void LockHeartbeat(EngineIOClient Client, Action Callback)
+        private void LockHeartbeat(EngineIOClient Client, Action Process)
         {
-            lock (ClientMutex)
+            if (Client != null)
             {
-                if (Client != null)
+                if (!HeartbeatMutex.ContainsKey(Client))
                 {
-                    if (!HeartbeatMutex.ContainsKey(Client))
-                    {
-                        HeartbeatMutex.TryAdd(Client, new object());
-                    }
-
-                    lock (HeartbeatMutex[Client])
-                    {
-                        Callback?.Invoke();
-                    }
+                    HeartbeatMutex.TryAdd(Client, new object());
                 }
+
+                SimpleMutex.Lock(HeartbeatMutex[Client], Process);
             }
         }
     }
