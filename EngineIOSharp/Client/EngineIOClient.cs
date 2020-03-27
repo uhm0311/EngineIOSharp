@@ -1,6 +1,8 @@
 ﻿using EngineIOSharp.Common.Enum;
+using EngineIOSharp.Server;
 using SimpleThreadMonitor;
 using System;
+using System.Net;
 using WebSocketSharp;
 using WebSocketSharp.Net.WebSockets;
 
@@ -10,35 +12,28 @@ namespace EngineIOSharp.Client
     {
         private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
 
-        private readonly object ClientMutex = "ClientMutex";
+        private readonly object ClientMutex = new object();
 
         public WebSocket WebSocketClient { get; private set; }
+        public string URI { get; private set; }
 
         public int PingInterval { get; private set; }
         public int PingTimeout { get; private set; }
-
-        public string SocketID { get; private set; }
-        public string URI { get; private set; }
 
         public uint AutoReconnect { get; set; }
         public bool IsAlive
         {
             get
             {
-                return WebSocketClient?.IsAlive ?? false;
+                return WebSocketClient.IsAlive;
             }
         }
 
-        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, string SocketID = null, uint AutoReconnect = 0) 
+        public string SID { get; private set; }
+
+        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, uint AutoReconnect = 0) 
         {
-            string URI = string.Format(URIFormat, Scheme, Host, Port);
-
-            if (!string.IsNullOrWhiteSpace(SocketID))
-            {
-                URI += string.Format("&sid={0}", SocketID);
-            }
-
-            Initialize(URI, AutoReconnect);
+            Initialize(string.Format(URIFormat, Scheme, Host, Port), AutoReconnect);
         }
 
         public EngineIOClient(string URI, uint AutoReconnect = 0)
@@ -46,9 +41,11 @@ namespace EngineIOSharp.Client
             Initialize(URI, AutoReconnect);
         }
 
-        internal EngineIOClient(WebSocketContext Context)
+        internal EngineIOClient(WebSocketContext Context, string SID)
         {
-            URI = string.Format(URIFormat, Context.IsSecureConnection ? WebSocketScheme.wss : WebSocketScheme.ws, Context.ServerEndPoint.Address, Context.ServerEndPoint.Port);
+            this.SID = SID;
+
+            URI = Context.RequestUri.ToString();
             AutoReconnect = 0;
 
             Initialize(Context.WebSocket);
@@ -68,10 +65,10 @@ namespace EngineIOSharp.Client
             WebSocketClient = Client;
 
             WebSocketClient.Log.Output = LogOutput;
-            WebSocketClient.OnOpen += OnWebsocketOpen;
-            WebSocketClient.OnClose += OnWebsocketClose;
-            WebSocketClient.OnMessage += OnWebsocketMessage;
-            WebSocketClient.OnError += OnWebsocketError;
+            WebSocketClient.OnOpen += OnWebSocketOpen;
+            WebSocketClient.OnClose += OnWebSocketClose;
+            WebSocketClient.OnMessage += OnWebSocketMessage;
+            WebSocketClient.OnError += OnWebSocketError;
         }
 
         private void Initialize()
@@ -81,17 +78,24 @@ namespace EngineIOSharp.Client
 
         public void Connect()
         {
-            SimpleMutex.Lock(ClientMutex, WebSocketClient.Connect, OnEngineIOError);
+            SimpleMutex.Lock(ClientMutex, () =>
+            {
+                if (!IsAlive)
+                {
+                    WebSocketClient.Connect();
+                }
+            }, OnEngineIOError);
         }
 
         public void Close()
         {
             SimpleMutex.Lock(ClientMutex, () =>
             {
-                WebSocketClient?.Close();
-                StopHeartbeat();
-
-                Initialize();
+                if (IsAlive)
+                {
+                    WebSocketClient.Close();
+                    StopHeartbeat();
+                }
             }, OnEngineIOError);
         }
 
@@ -114,7 +118,7 @@ namespace EngineIOSharp.Client
 
         public override int GetHashCode()
         {
-            return SocketID?.GetHashCode() ?? base.GetHashCode();
+            return SID?.GetHashCode() ?? base.GetHashCode();
         }
     }
 }

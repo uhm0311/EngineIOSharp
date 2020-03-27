@@ -10,7 +10,7 @@ namespace EngineIOSharp.Server
     partial class EngineIOServer
     {
         private readonly ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>> EventHandlers = new ConcurrentDictionary<EngineIOServerEvent, List<Action<EngineIOClient>>>();
-        private readonly object EventHandlersMutex = "EventHandlersMutex";
+        private readonly object EventHandlersMutex = new object();
 
         public void On(EngineIOServerEvent Event, Action<EngineIOClient> Callback)
         {

@@ -10,9 +10,9 @@ namespace EngineIOSharp.Server
     public partial class EngineIOServer : IDisposable
     {
         public const string DefaultServerPath = "/engine.io/";
-        private readonly object ServerMutex = "ServerMutex";
+        private readonly object ServerMutex = new object();
 
-        public WebSocketServer WebSocketServer { get; private set; }
+        public HttpServer HttpServer { get; private set; }
 
         public int PingInterval { get; private set; }
         public int PingTimeout { get; private set; }
@@ -25,12 +25,12 @@ namespace EngineIOSharp.Server
 
         public bool IsListening
         {
-            get { return WebSocketServer.IsListening; }
+            get { return HttpServer.IsListening; }
         }
 
         public bool IsSecure
         {
-            get { return WebSocketServer.IsSecure; }
+            get { return HttpServer.IsSecure; }
         }
 
         private bool IsWebSocketSecure = false;
@@ -62,11 +62,13 @@ namespace EngineIOSharp.Server
 
         private void Initialize()
         {
-            Action<LogData, string> LogOutput = WebSocketServer?.Log?.Output ?? ((_, __) => { });
-            WebSocketServer = new WebSocketServer(IPAddress, Port, IsWebSocketSecure);
+            Action<LogData, string> LogOutput = HttpServer?.Log?.Output ?? ((_, __) => { });
+            HttpServer = new HttpServer(IPAddress, Port, IsWebSocketSecure);
 
-            WebSocketServer.Log.Output = LogOutput;
-            WebSocketServer.AddWebSocketService(ServerPath, CreateBehavior);
+            HttpServer.Log.Output = LogOutput;
+            HttpServer.OnGet += OnHttpRequest;
+            HttpServer.OnPost += OnHttpRequest;
+            HttpServer.AddWebSocketService(ServerPath, CreateBehavior);
         }
 
         public void Start()
@@ -75,7 +77,7 @@ namespace EngineIOSharp.Server
             {
                 if (!IsListening)
                 {
-                    WebSocketServer.Start();
+                    HttpServer.Start();
                 }
             });
         }
@@ -90,12 +92,11 @@ namespace EngineIOSharp.Server
                     {
                         foreach (EngineIOClient Client in ClientList)
                         {
-                            Client.Close();
+                            Client?.Close();
                         }
                     });
 
-                    WebSocketServer.Stop();
-                    Initialize();
+                    HttpServer.Stop();
                 }
             });
         }

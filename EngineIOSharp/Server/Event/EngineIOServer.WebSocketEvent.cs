@@ -1,9 +1,12 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Client.Event;
+using EngineIOSharp.Common;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Server.Event;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
+using WebSocketSharp.Net.WebSockets;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
@@ -11,20 +14,66 @@ namespace EngineIOSharp.Server
     partial class EngineIOServer
     {
         private readonly List<EngineIOClient> ClientList = new List<EngineIOClient>();
-        private readonly object ClientMutex = "ClientMutex";
+        private readonly object ClientMutex = new object();
 
         private EngineIOBehavior CreateBehavior()
         {
-            return new EngineIOBehavior((EngineIOClient Client, string SocketID) =>
+            return new EngineIOBehavior((WebSocketContext Context) =>
             {
                 SimpleMutex.Lock(ClientMutex, () =>
                 {
+                    string SID = Context.QueryString["sid"] ?? EngineIOSocketID.Generate();
+                    EngineIOClient Client = new EngineIOClient(Context, SID);
+
                     if (!HeartbeatMutex.ContainsKey(Client))
                     {
-                        Client.Send(EngineIOPacket.CreateOpenPacket(SocketID, PingInterval, PingTimeout));
-                        ClientList.Add(Client);
+                        Client.On(EngineIOClientEvent.CLOSE, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                if (Client != null)
+                                {
+                                    ClientList.Remove(Client);
+                                    StopHeartbeat(Client);
+                                }
+                            });
+                        });
 
+                        Client.On(EngineIOClientEvent.UPGRADE, () =>
+                        {
+                            SimpleMutex.Lock(ClientMutex, () =>
+                            {
+                                SIDList.Remove(Client.SID);
+                            });
+                        });
+
+                        Client.On(EngineIOClientEvent.FLUSH, (Packet) =>
+                        {
+                            if (Packet.Type == EngineIOPacketType.PONG)
+                            {
+                                SimpleMutex.Lock(ClientMutex, () =>
+                                {
+                                    LockHeartbeat(Client, () =>
+                                    {
+                                        if (!Heartbeat.ContainsKey(Client))
+                                        {
+                                            Heartbeat.TryAdd(Client, 0);
+                                        }
+
+                                        Heartbeat[Client]++;
+                                    });
+                                });
+                            }
+                        });
+
+                        if (!SIDList.Contains(SID))
+                        {
+                            Client.Send(EngineIOPacket.CreateOpenPacket(Client.SID, PingInterval, PingTimeout));
+                        }
+
+                        ClientList.Add(Client);
                         StartHeartbeat(Client);
+
                         CallEventHandler(EngineIOServerEvent.CONNECTION, Client);
                     }
                 });
@@ -33,9 +82,9 @@ namespace EngineIOSharp.Server
 
         private class EngineIOBehavior : WebSocketBehavior
         {
-            private readonly Action<EngineIOClient, string> Initializer;
+            private readonly Action<WebSocketContext> Initializer;
 
-            internal EngineIOBehavior(Action<EngineIOClient, string> Initializer)
+            internal EngineIOBehavior(Action<WebSocketContext> Initializer)
             {
                 this.Initializer = Initializer;
             }
@@ -44,7 +93,7 @@ namespace EngineIOSharp.Server
             {
                 if (ID != null && Sessions[ID]?.Context != null)
                 {
-                    Initializer(new EngineIOClient(Sessions[ID].Context), ID);
+                    Initializer(Sessions[ID].Context);
                 }
             }
         }

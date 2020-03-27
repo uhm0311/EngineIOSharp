@@ -6,8 +6,8 @@ namespace EngineIOSharp.Client
 {
     partial class EngineIOClient
     {
-        private readonly object PingMutex = "PingMutex";
-        private readonly object PongMutex = "PongMutex";
+        private readonly object PingMutex = new object();
+        private readonly object PongMutex = new object();
 
         private Timer PingTimer = null;
         private Timer PongTimer = null;

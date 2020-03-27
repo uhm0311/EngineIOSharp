@@ -12,7 +12,7 @@ namespace EngineIOSharp.Client
     partial class EngineIOClient
     {
         private readonly ConcurrentDictionary<EngineIOClientEvent, List<Delegate>> EventHandlers = new ConcurrentDictionary<EngineIOClientEvent, List<Delegate>>();
-        private readonly object EventHandlersMutex = "EventHandlersMutex";
+        private readonly object EventHandlersMutex = new object();
 
         public void On(EngineIOClientEvent Event, Action Callback)
         {
@@ -67,12 +67,14 @@ namespace EngineIOSharp.Client
             {
                 if (Packet != null)
                 {
+                    CallEventHandler(EngineIOClientEvent.PACKET, Packet);
+
                     switch (Packet.Type)
                     {
                         case EngineIOPacketType.OPEN:
                             JObject JsonData = JObject.Parse(Packet.Data);
 
-                            SocketID = JsonData["sid"].ToString();
+                            SID = JsonData["sid"].ToString();
                             PingInterval = int.Parse(JsonData["pingInterval"].ToString());
                             PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
 
@@ -85,19 +87,19 @@ namespace EngineIOSharp.Client
                             break;
 
                         case EngineIOPacketType.PING:
-                            Send(EngineIOPacket.CreatePongPacket());
-
-                            CallEventHandler(EngineIOClientEvent.PING_RECEIVE);
+                            Send(EngineIOPacket.CreatePongPacket(Packet.Data));
                             break;
 
                         case EngineIOPacketType.PONG:
                             Pong++;
-
-                            CallEventHandler(EngineIOClientEvent.PONG_RECEIVE);
                             break;
 
                         case EngineIOPacketType.MESSAGE:
                             CallEventHandler(EngineIOClientEvent.MESSAGE, Packet);
+                            break;
+
+                        case EngineIOPacketType.UPGRADE:
+                            CallEventHandler(EngineIOClientEvent.UPGRADE);
                             break;
                     }
                 }
@@ -112,7 +114,7 @@ namespace EngineIOSharp.Client
         {
             if (JsonData != null)
             {
-                SocketID = JsonData["sid"].ToString();
+                SID = JsonData["sid"].ToString();
                 PingInterval = int.Parse(JsonData["pingInterval"].ToString());
                 PingTimeout = int.Parse(JsonData["pingTimeout"].ToString());
 

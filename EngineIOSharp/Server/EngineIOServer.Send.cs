@@ -13,7 +13,7 @@ namespace EngineIOSharp.Server
                 {
                     foreach (EngineIOClient Client in ClientList)
                     {
-                        Client.Send(Data);
+                        Client?.Send(Data);
                     }
                 });
             }
@@ -27,7 +27,7 @@ namespace EngineIOSharp.Server
                 {
                     foreach (EngineIOClient Client in ClientList)
                     {
-                        Client.Send(RawData);
+                        Client?.Send(RawData);
                     }
                 });
             }
