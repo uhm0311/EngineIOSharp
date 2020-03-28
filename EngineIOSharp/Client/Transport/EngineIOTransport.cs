@@ -48,12 +48,12 @@ namespace EngineIOSharp.Client.Transport
                         }
                         catch (Exception Exception)
                         {
-                            EngineIOLogger.E(this, Exception);
+                            EngineIOLogger.Error(this, Exception);
                         }
                     }
                     else
                     {
-                        EngineIOLogger.E(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
+                        EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
                     }
                 });
             }
