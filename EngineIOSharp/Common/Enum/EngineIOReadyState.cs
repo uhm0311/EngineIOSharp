@@ -1,10 +1,12 @@
 ﻿namespace EngineIOSharp.Common.Enum
 {
-    public enum ReadyState
+    public enum EngineIOReadyState
     {
         OPENING,
         OPEN,
+        CLOSING,
         CLOSED,
-        PAUSED
+        PAUSING,
+        PAUSED,
     }
 }

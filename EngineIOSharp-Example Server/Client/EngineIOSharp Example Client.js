@@ -1,4 +1,4 @@
-var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', /*{ 'transports' : [ 'websocket' ]}*/);
+var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', { 'transports' : [ 'polling' ]});
 
 socket.on('open', function () {
 	console.log('Connected!');

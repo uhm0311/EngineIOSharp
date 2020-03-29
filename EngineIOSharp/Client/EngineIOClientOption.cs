@@ -1,4 +1,5 @@
-﻿using System;
+﻿using EngineIOSharp.Common.Enum;
+using System;
 using System.Collections.Generic;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
@@ -7,20 +8,17 @@ namespace EngineIOSharp.Client
 {
     public class EngineIOClientOption
     {
+        public EngineIOScheme Scheme { get; private set; }
         public string Host { get; private set; }
         public ushort Port { get; private set; }
         public ushort PolicyPort { get; private set; }
 
         public string Path { get; private set; }
-        public IEnumerable<KeyValuePair<string, string>> Query { get; private set; }
+        internal IDictionary<string, string> Query { get; private set; }
         
         public bool Upgrade { get; private set; }
         public bool RemeberUpgrade { get; private set; }
         public bool OnlyBinaryUpgrades { get; private set; }
-
-        public bool ForceBase64 { get; private set; }
-        public bool ForceJSONP { get; private set; }
-        public bool JSONP { get; private set; }
 
         public bool WithCredentials { get; private set; }
         public bool TimestampRequests { get; private set; }
@@ -32,7 +30,7 @@ namespace EngineIOSharp.Client
         public bool WebSocket { get; private set; }
         public string[] WebSocketSubprotocols { get; private set; }
 
-        public IEnumerable<KeyValuePair<string, string>> ExtraHeaders { get; private set; }
+        internal IDictionary<string, string> ExtraHeaders { get; private set; }
 
         public X509CertificateCollection ClientCertificates { get; private set; }
         public LocalCertificateSelectionCallback ClientCertificateSelectionCallback { get; private set; }
@@ -49,9 +47,6 @@ namespace EngineIOSharp.Client
         /// <param name="Upgrade">Whether the client should try to upgrade the transport.</param>
         /// <param name="RemeberUpgrade">Whether the client should bypass normal upgrade process when previous websocket connection is succeeded.</param>
         /// <param name="OnlyBinaryUpgrades">Whether transport upgrades should be restricted to transports supporting binary data.</param>
-        /// <param name="ForceBase64">Forces base 64 encoding for binary data.</param>
-        /// <param name="ForceJSONP">Forces JSONP for polling transport.</param>
-        /// <param name="JSONP">Whether to use JSONP when necessary for polling.</param>
         /// <param name="WithCredentials">Whether to include credentials such as cookies, authorization headers, TLS client certificates, etc. with polling requests.</param>
         /// <param name="TimestampRequests">Whether to add the timestamp with each transport request. Polling requests are always stamped.</param>
         /// <param name="TimestampParam">Timestamp parameter</param>
@@ -63,9 +58,10 @@ namespace EngineIOSharp.Client
         /// <param name="ClientCertificates">The collection of security certificates that are associated with each request.</param>
         /// <param name="ClientCertificateSelectionCallback">Callback used to select the certificate to supply to the server.</param>
         /// <param name="ServerCertificateValidationCallback">Callback method to validate the server certificate.</param>
-        public EngineIOClientOption(string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool OnlyBinaryUpgrades = false, bool ForceBase64 = false, bool ForceJSONP = false, bool JSONP = true, bool WithCredentials = true, bool TimestampRequests = true, string TimestampParam = "t", bool Polling = true, ulong PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
+        public EngineIOClientOption(EngineIOScheme Scheme, string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool OnlyBinaryUpgrades = false, bool WithCredentials = true, bool TimestampRequests = true, string TimestampParam = "t", bool Polling = true, ulong PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
         {
-            this.Host = Host ?? string.Empty;
+            this.Scheme = Scheme;
+            this.Host = Host;
             this.Port = Port;
             this.PolicyPort = PolicyPort;
 
@@ -75,10 +71,6 @@ namespace EngineIOSharp.Client
             this.Upgrade = Upgrade;
             this.RemeberUpgrade = RemeberUpgrade;
             this.OnlyBinaryUpgrades = OnlyBinaryUpgrades;
-
-            this.ForceBase64 = ForceBase64;
-            this.ForceJSONP = ForceJSONP;
-            this.JSONP = JSONP;
 
             this.WithCredentials = WithCredentials;
             this.TimestampRequests = TimestampRequests;
@@ -106,10 +98,32 @@ namespace EngineIOSharp.Client
                 throw new ArgumentException("Either Polling or WebSocket must be used as transport.", "Polling, WebSocket");
             }
 
-            if (!Query.ContainsKey("EIO"))
+            if (!this.Query.ContainsKey("EIO"))
             {
-                Query.Add("EIO", "3");
+                this.Query.Add("EIO", "3");
             }
+
+            if (this.Query.ContainsKey("transport"))
+            {
+                this.Query.Remove("transport");
+            }
+
+            if (this.Query.ContainsKey("j"))
+            {
+                this.Query.Remove("j");
+            }
+
+            if (this.Query.ContainsKey("b64"))
+            {
+                this.Query.Remove("b64");
+            }
+
+            while (this.Path.IndexOf('/') != this.Path.LastIndexOf('/') && this.Path.EndsWith("/"))
+            {
+                this.Path = this.Path.Substring(0, this.Path.Length - 1);
+            }
+
+            this.Path += '/';
         }
 
         private static X509Certificate DefaultClientCertificateSelectionCallback(object _1, string _2, X509CertificateCollection _3, X509Certificate _4, string[] _5)

@@ -1,9 +1,18 @@
-﻿namespace EngineIOSharp.Example.Client
+﻿using EngineIOSharp.Client;
+using EngineIOSharp.Common.Enum;
+using System;
+
+namespace EngineIOSharp.Example.Client
 {
     class Program
     {
         static void Main(string[] args)
         {
+            EngineIOClient client = new EngineIOClient(new EngineIOClientOption(EngineIOScheme.http, "localhost", 1009));
+            client.Connect();
+
+            Console.Read();
+
             /*using (EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009))
             {
                 client.On(EngineIOClientEvent.OPEN, () =>

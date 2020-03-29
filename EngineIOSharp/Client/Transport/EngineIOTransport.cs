@@ -3,6 +3,7 @@ using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
 using System;
+using System.Collections.Generic;
 using System.Threading;
 
 namespace EngineIOSharp.Client.Transport
@@ -11,22 +12,22 @@ namespace EngineIOSharp.Client.Transport
     {
         protected EngineIOClientOption Option { get; private set; }
 
-        public ReadyState ReadyState { get; protected set; }
+        public EngineIOReadyState ReadyState { get; protected set; }
         public bool Writable { get; protected set; }
 
         protected EngineIOTransport(EngineIOClientOption Option)
         {
             this.Option = Option;
-            ReadyState = ReadyState.CLOSED;
+            ReadyState = EngineIOReadyState.CLOSED;
         }
 
         public EngineIOTransport Open()
         {
             ThreadPool.QueueUserWorkItem((_) => 
             {
-                if (ReadyState == ReadyState.CLOSED)
+                if (ReadyState == EngineIOReadyState.CLOSED)
                 {
-                    ReadyState = ReadyState.OPENING;
+                    ReadyState = EngineIOReadyState.OPENING;
                     OpenInternal();
                 }
             });
@@ -34,13 +35,13 @@ namespace EngineIOSharp.Client.Transport
             return this;
         }
 
-        public EngineIOTransport Send(params EngineIOPacket[] Packets)
+        public EngineIOTransport Send(IEnumerable<EngineIOPacket> Packets)
         {
-            if ((Packets?.Length ?? 0) > 0)
+            if (Packets != null)
             {
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    if (ReadyState == ReadyState.OPEN)
+                    if (ReadyState == EngineIOReadyState.OPEN)
                     {
                         try
                         {
@@ -65,9 +66,9 @@ namespace EngineIOSharp.Client.Transport
         {
             ThreadPool.QueueUserWorkItem((_) =>
             {
-                if (ReadyState == ReadyState.OPENING || ReadyState == ReadyState.OPEN)
+                if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
                 {
-                    EmitClose();
+                    OnClose();
                     CloseInternal();
                 }
             });
@@ -75,32 +76,32 @@ namespace EngineIOSharp.Client.Transport
             return this;
         }
 
-        protected EngineIOTransport EmitOpen()
+        protected EngineIOTransport OnOpen()
         {
-            ReadyState = ReadyState.OPEN;
-            Emit(EngineIOEvent.OPEN);
+            ReadyState = EngineIOReadyState.OPEN;
+            Emit(Event.OPEN);
 
             return this;
         }
 
-        protected EngineIOTransport EmitError(string Message, Exception Description)
+        protected EngineIOTransport OnError(string Message, Exception Description)
         {
-            Emit(EngineIOEvent.ERROR, new EngineIOException(Message, Description));
+            Emit(Event.ERROR, new EngineIOException(Message, Description));
 
             return this;
         }
 
-        protected EngineIOTransport EmitClose()
+        protected EngineIOTransport OnClose()
         {
-            ReadyState = ReadyState.CLOSED;
-            Emit(EngineIOEvent.CLOSE);
+            ReadyState = EngineIOReadyState.CLOSED;
+            Emit(Event.CLOSE);
 
             return this;
         }
 
-        protected EngineIOTransport EmitPacket(EngineIOPacket Packet)
+        protected EngineIOTransport OnPacket(EngineIOPacket Packet)
         {
-            Emit(EngineIOEvent.PACKET, Packet);
+            Emit(Event.PACKET, Packet);
 
             return this;
         }
@@ -109,6 +110,29 @@ namespace EngineIOSharp.Client.Transport
 
         protected abstract void CloseInternal();
 
-        protected abstract void SendInternal(params EngineIOPacket[] Packets);
+        protected abstract void SendInternal(IEnumerable<EngineIOPacket> Packets);
+
+        internal static class Event
+        {
+            public static readonly string OPEN = "open";
+            public static readonly string ERROR = "error";
+            public static readonly string CLOSE = "close";
+
+            public static readonly string PACKET = "packet";
+            public static readonly string MESSAGE = "message";
+
+            public static readonly string PACKET_CREATE = "packetCreate";
+            public static readonly string FLUSH = "flush";
+            public static readonly string DRAIN = "drain";
+
+            public static readonly string POLL = "poll";
+            public static readonly string POLL_COMPLETE = "pollComplete";
+
+            public static readonly string UPGRADE = "upgrade";
+            public static readonly string UPGRADE_ERROR = "upgradeError";
+
+            public static readonly string REQUEST_HEADERS = "requestHeaders";
+            public static readonly string RESPONSE_HEADERS = "responseHeaders";
+        }
     }
 }

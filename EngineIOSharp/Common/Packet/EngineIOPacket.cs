@@ -66,9 +66,9 @@ namespace EngineIOSharp.Common.Packet
                     throw new EngineIOException("Packet encoding failed. " + this);
                 }
             }
-            catch (Exception ex)
+            catch (Exception Exception)
             {
-                throw new EngineIOException("Packet encoding failed. " + this, ex);
+                throw new EngineIOException("Packet encoding failed. " + this, Exception);
             }
         }
     }
