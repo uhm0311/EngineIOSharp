@@ -8,7 +8,7 @@ using System.Threading;
 
 namespace EngineIOSharp.Client.Transport
 {
-    internal abstract class EngineIOTransport : Emitter<string, object>
+    internal abstract class EngineIOTransport : Emitter<EngineIOTransport, string, object>
     {
         protected EngineIOClientOption Option { get; private set; }
 
@@ -18,10 +18,12 @@ namespace EngineIOSharp.Client.Transport
         protected EngineIOTransport(EngineIOClientOption Option)
         {
             this.Option = Option;
+
             ReadyState = EngineIOReadyState.CLOSED;
+            Writable = false;
         }
 
-        public EngineIOTransport Open()
+        internal EngineIOTransport Open()
         {
             ThreadPool.QueueUserWorkItem((_) => 
             {
@@ -35,7 +37,26 @@ namespace EngineIOSharp.Client.Transport
             return this;
         }
 
-        public EngineIOTransport Send(IEnumerable<EngineIOPacket> Packets)
+        internal EngineIOTransport Close()
+        {
+            ThreadPool.QueueUserWorkItem((_) =>
+            {
+                if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
+                {
+                    CloseInternal();
+                    OnClose();
+                }
+            });
+
+            return this;
+        }
+
+        internal EngineIOTransport Send(params EngineIOPacket[] Packets)
+        {
+            return Send(Packets as IEnumerable<EngineIOPacket>);
+        }
+
+        internal EngineIOTransport Send(IEnumerable<EngineIOPacket> Packets)
         {
             if (Packets != null)
             {
@@ -45,7 +66,10 @@ namespace EngineIOSharp.Client.Transport
                     {
                         try
                         {
-                            SendInternal(Packets);
+                            foreach (EngineIOPacket Packet in Packets)
+                            {
+                                SendInternal(Packet);
+                            }
                         }
                         catch (Exception Exception)
                         {
@@ -62,31 +86,11 @@ namespace EngineIOSharp.Client.Transport
             return this;
         }
 
-        public EngineIOTransport Close()
-        {
-            ThreadPool.QueueUserWorkItem((_) =>
-            {
-                if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
-                {
-                    OnClose();
-                    CloseInternal();
-                }
-            });
-
-            return this;
-        }
-
         protected EngineIOTransport OnOpen()
         {
             ReadyState = EngineIOReadyState.OPEN;
+            Writable = true;
             Emit(Event.OPEN);
-
-            return this;
-        }
-
-        protected EngineIOTransport OnError(string Message, Exception Description)
-        {
-            Emit(Event.ERROR, new EngineIOException(Message, Description));
 
             return this;
         }
@@ -106,16 +110,22 @@ namespace EngineIOSharp.Client.Transport
             return this;
         }
 
+        protected EngineIOTransport OnError(string Message, Exception Description)
+        {
+            Emit(Event.ERROR, new EngineIOException(Message, Description));
+
+            return this;
+        }
+
         protected abstract void OpenInternal();
 
         protected abstract void CloseInternal();
 
-        protected abstract void SendInternal(IEnumerable<EngineIOPacket> Packets);
+        protected abstract void SendInternal(EngineIOPacket Packets);
 
         internal static class Event
         {
             public static readonly string OPEN = "open";
-            public static readonly string ERROR = "error";
             public static readonly string CLOSE = "close";
 
             public static readonly string PACKET = "packet";
@@ -133,6 +143,8 @@ namespace EngineIOSharp.Client.Transport
 
             public static readonly string REQUEST_HEADERS = "requestHeaders";
             public static readonly string RESPONSE_HEADERS = "responseHeaders";
+
+            public static readonly string ERROR = "error";
         }
     }
 }

@@ -23,7 +23,7 @@ namespace EngineIOSharp.Client.Transport
             throw new NotImplementedException();
         }
 
-        protected override void SendInternal(IEnumerable<EngineIOPacket> Packets)
+        protected override void SendInternal(EngineIOPacket Packets)
         {
             throw new NotImplementedException();
         }

@@ -109,7 +109,19 @@ namespace EngineIOSharp.Common.Packet
                                 }
 
                                 Content = Content.Substring(Buffer.Length);
-                                Result.Add(Decode(Buffer));
+
+                                if (Buffer.StartsWith("b"))
+                                {
+                                    List<byte> RawBuffer = new List<byte>() { (byte)Buffer[1] };
+                                    Buffer = Buffer.Substring(2);
+
+                                    RawBuffer.AddRange(Convert.FromBase64String(Buffer));
+                                    Result.Add(Decode(RawBuffer.ToArray()));
+                                }
+                                else
+                                {
+                                    Result.Add(Decode(Buffer));
+                                }
                             }
                         }
                     }
