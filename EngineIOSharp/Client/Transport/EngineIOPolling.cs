@@ -1,7 +1,9 @@
 ﻿using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
+using SimpleThreadMonitor;
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
 using System.Text;
@@ -92,113 +94,135 @@ namespace EngineIOSharp.Client.Transport
                 Writable = false;
 
                 StringBuilder Builder = new StringBuilder();
-                Builder.Append((int)EngineIOPacketType.MESSAGE);
+                Builder.Append((int)Packet.Type);
                 Builder.Append(Packet.IsText ? Packet.Data : Convert.ToBase64String(Packet.RawData));
-                Builder.Insert(0, string.Format("{0}:b", Encoding.UTF8.GetByteCount(Builder.ToString())));
 
-                Request(HttpMethod.POST, Builder.ToString(), () =>
+                int Length = Encoding.UTF8.GetByteCount(Builder.ToString());
+
+                if (Packet.IsText)
                 {
-                    Writable = true;
-                    Emit(Event.DRAIN);
-                }, (Exception) => OnError("Post error", Exception));
+                    Builder.Insert(0, string.Format("{0}:", Length));
+                }
+                else
+                {
+                    Builder.Insert(0, string.Format("{0}:b", Length + 1));
+                }
+
+                Request(HttpMethod.POST, Builder.ToString(), (Exception) => OnError("Post error", Exception));
             }
         }
 
-        private void Request(HttpMethod Method = HttpMethod.GET, string Data = "", Action Callback = null, Action<Exception> ErrorCallback = null)
+        private void Request(HttpMethod Method = HttpMethod.GET, string Data = "", Action<Exception> ErrorCallback = null)
         {
             ThreadPool.QueueUserWorkItem((_) =>
             {
-                try
+                SimpleMutex.Lock((int)Method, () =>
                 {
-                    StringBuilder URL = new StringBuilder();
-                    URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme, Option.Host, Option.Port, Option.Path)).Append('?');
-
-                    if (Option.Query.Count > 0)
+                    try
                     {
-                        foreach (string Key in Option.Query.Keys)
+                        StringBuilder URL = new StringBuilder();
+                        URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme, Option.Host, Option.Port, Option.Path)).Append('?');
+
+                        if (Option.Query.Count > 0)
                         {
-                            URL.Append(Key).Append('=').Append(Option.Query[Key]).Append('&');
-                        }
-                    }
-
-                    URL.Append("b64=1&");
-                    URL.Append("transport=polling&");
-                    URL.Append(string.Format("{0}={1}", Option.TimestampParam, EngineIOTimestamp.Generate()));
-
-                    HttpWebRequest Request = WebRequest.Create(URL.ToString()) as HttpWebRequest;
-                    Request.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
-                    Request.Method = Method.ToString();
-                    Request.CookieContainer = Cookies;
-                    Request.KeepAlive = false;
-
-                    if (Option.ExtraHeaders.Count > 0)
-                    {
-                        foreach (string Key in Option.ExtraHeaders.Keys)
-                        {
-                            try { Request.Headers.Add(Key, Option.ExtraHeaders[Key]); }
-                            catch { }
-                        }
-                    }
-
-                    if (Option.ClientCertificates != null)
-                    {
-                        Request.ClientCertificates = Option.ClientCertificates;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(Data))
-                    {
-                        using (StreamWriter Writer = new StreamWriter(Request.GetRequestStream()))
-                        {
-                            Writer.Write(Data);
-                        }
-                    }
-
-                    HttpWebResponse Response = Request.GetResponse() as HttpWebResponse;
-
-                    if (Response.StatusCode == HttpStatusCode.OK)
-                    {
-                        Callback?.Invoke();
-
-                        foreach (EngineIOPacket Packet in EngineIOPacket.Decode(Response))
-                        {
-                            if (Packet.Type != EngineIOPacketType.CLOSE)
+                            foreach (string Key in new List<string>(Option.Query.Keys))
                             {
-                                if (ReadyState == EngineIOReadyState.OPENING)
+                                URL.Append(Key).Append('=').Append(Option.Query[Key]).Append('&');
+                            }
+                        }
+
+                        URL.Append("b64=1&");
+                        URL.Append("transport=polling&");
+                        URL.Append(string.Format("{0}={1}", Option.TimestampParam, EngineIOTimestamp.Generate()));
+
+                        HttpWebRequest Request = WebRequest.Create(URL.ToString()) as HttpWebRequest;
+                        Request.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
+                        Request.ServicePoint.Expect100Continue = false;
+                        Request.Method = Method.ToString();
+                        Request.CookieContainer = Cookies;
+                        Request.KeepAlive = false;
+
+                        if (Option.ExtraHeaders.Count > 0)
+                        {
+                            foreach (string Key in new List<string>(Option.ExtraHeaders.Keys))
+                            {
+                                try { Request.Headers.Add(Key, Option.ExtraHeaders[Key]); }
+                                catch { }
+                            }
+                        }
+
+                        if (Option.ClientCertificates != null)
+                        {
+                            Request.ClientCertificates = Option.ClientCertificates;
+                        }
+
+                        if (!string.IsNullOrWhiteSpace(Data))
+                        {
+                            using (StreamWriter Writer = new StreamWriter(Request.GetRequestStream()))
+                            {
+                                Writer.Write(Data);
+                            }
+                        }
+
+                        using (HttpWebResponse Response = Request.GetResponse() as HttpWebResponse)
+                        {
+                            if (Response.StatusCode == HttpStatusCode.OK)
+                            {
+                                if (Method == HttpMethod.GET)
                                 {
-                                    OnOpen();
-                                }
+                                    EngineIOPacket[] Packets = EngineIOPacket.Decode(Response);
 
-                                OnPacket(Packet);
-
-                                if (ReadyState != EngineIOReadyState.CLOSED)
-                                {
-                                    Polling = false;
-                                    Emit(Event.POLL_COMPLETE);
-
-                                    if (ReadyState == EngineIOReadyState.OPEN)
+                                    if ((Packets?.Length ?? 0) > 0)
                                     {
-                                        Poll();
+                                        foreach (EngineIOPacket Packet in Packets)
+                                        {
+                                            if (Packet.Type != EngineIOPacketType.CLOSE)
+                                            {
+                                                if (ReadyState == EngineIOReadyState.OPENING)
+                                                {
+                                                    OnOpen();
+                                                }
+
+                                                OnPacket(Packet);
+                                            }
+                                            else
+                                            {
+                                                OnClose();
+                                            }
+                                        }
+
+                                        if (ReadyState != EngineIOReadyState.CLOSED)
+                                        {
+                                            Polling = false;
+                                            Emit(Event.POLL_COMPLETE);
+
+                                            if (ReadyState == EngineIOReadyState.OPEN)
+                                            {
+                                                Poll();
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                            else
-                            {
-                                OnClose();
+                                else if (Method == HttpMethod.POST)
+                                {
+                                    Writable = true;
+                                    Emit(Event.DRAIN);
+                                }
                             }
                         }
                     }
-                }
-                catch (Exception Exception)
-                {
-                    if (ErrorCallback == null)
+                    catch (Exception Exception)
                     {
-                        OnError("Error", Exception);
+                        if (ErrorCallback == null)
+                        {
+                            OnError("Error", Exception);
+                        }
+                        else
+                        {
+                            ErrorCallback(Exception);
+                        }
                     }
-                    else
-                    {
-                        ErrorCallback(Exception);
-                    }
-                }
+                });
             });
         }
 

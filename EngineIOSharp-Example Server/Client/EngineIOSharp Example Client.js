@@ -22,6 +22,8 @@ const readline = require('readline').createInterface({
 function onMessage (message) {
 	if (message != '/exit') {
 		socket.send(message);
+		socket.send(message);
+		
 		readline.question('', onMessage);
 	} else {
 		process.exit();

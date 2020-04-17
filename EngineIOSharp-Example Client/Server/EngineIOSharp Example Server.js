@@ -1,6 +1,9 @@
 var engine = require('engine.io', { 'transports': [ 'websocket' ] });
 var http = require('http').createServer();
-var server = engine.attach(http);
+var server = engine.attach(http, { 
+	pingTimeout: 1000000,
+	pingInterval: 1000000
+});
 
 var port = 1009;
 
@@ -17,8 +20,10 @@ http.listen(port, function() {
             socket.send(message);
 		});
 		
-		socket.on('close', function() { 
+		socket.on('close', function(e, d) { 
 			console.log('Client disconnected!');
+			console.log(e);
+			console.log(d);
 		});
 
 		socket.on('flush', function (packet) {
@@ -34,9 +39,5 @@ http.listen(port, function() {
 			console.log('Client packetCreate!');
 			console.log(packet);
 		});
-	});
-	
-	server.on('connection', function (socket) {	
-		console.log('Client connected!!');
 	});
 });

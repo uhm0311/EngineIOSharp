@@ -1,4 +1,5 @@
-﻿using System;
+﻿using SimpleThreadMonitor;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -9,6 +10,8 @@ namespace EngineIOSharp.Common.Static
     /// </summary>
     internal static class EngineIOTimestamp
     {
+        private static readonly object GeneratorMutex = new object();
+
         private static readonly string Alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_";
         private static readonly Dictionary<char, int> AlphabetIndex = new Dictionary<char, int>();
         private static readonly int AlphabetLength = Alphabet.Length;
@@ -44,18 +47,24 @@ namespace EngineIOSharp.Common.Static
 
         public static string Generate()
         {
-            string Key = Encode((long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds);
+            string Key = null;
 
-            if (!Key.Equals(PreviousKey))
+            SimpleMutex.Lock(GeneratorMutex, () =>
             {
-                Seed = 0;
+                Key = Encode((long)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalMilliseconds);
 
-                return PreviousKey = Key;
-            }
-            else
-            {
-                return string.Format("{0}.{1}", Key, Encode(Seed++));
-            }
+                if (!Key.Equals(PreviousKey))
+                {
+                    Seed = 0;
+                    PreviousKey = Key;
+                }
+                else
+                {
+                    Key = string.Format("{0}.{1}", Key, Encode(Seed++));
+                }
+            });
+
+            return Key;
         }
 
         static EngineIOTimestamp()

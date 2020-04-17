@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace EngineIOSharp.Client
 {
-    public partial class EngineIOClient : Emitter<EngineIOClient, string, object>
+    public partial class EngineIOClient : Emitter<EngineIOClient, string, object>, IDisposable
     {
         private static bool PriorWebsocketSuccess = false;
 
@@ -95,6 +95,11 @@ namespace EngineIOSharp.Client
             }
 
             return this;
+        }
+
+        public void Dispose()
+        {
+            Close();
         }
 
         private void SetTransport(EngineIOTransport Transport)

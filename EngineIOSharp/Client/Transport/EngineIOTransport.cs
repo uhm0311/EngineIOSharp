@@ -60,27 +60,24 @@ namespace EngineIOSharp.Client.Transport
         {
             if (Packets != null)
             {
-                ThreadPool.QueueUserWorkItem((_) =>
+                if (ReadyState == EngineIOReadyState.OPEN)
                 {
-                    if (ReadyState == EngineIOReadyState.OPEN)
+                    try
                     {
-                        try
+                        foreach (EngineIOPacket Packet in Packets)
                         {
-                            foreach (EngineIOPacket Packet in Packets)
-                            {
-                                SendInternal(Packet);
-                            }
-                        }
-                        catch (Exception Exception)
-                        {
-                            EngineIOLogger.Error(this, Exception);
+                            SendInternal(Packet);
                         }
                     }
-                    else
+                    catch (Exception Exception)
                     {
-                        EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
+                        EngineIOLogger.Error(this, Exception);
                     }
-                });
+                }
+                else
+                {
+                    EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
+                }
             }
 
             return this;
@@ -112,7 +109,10 @@ namespace EngineIOSharp.Client.Transport
 
         protected EngineIOTransport OnError(string Message, Exception Description)
         {
-            Emit(Event.ERROR, new EngineIOException(Message, Description));
+            EngineIOException Exception = new EngineIOException(Message, Description);
+
+            EngineIOLogger.Error(this, Exception);
+            Emit(Event.ERROR, Exception);
 
             return this;
         }

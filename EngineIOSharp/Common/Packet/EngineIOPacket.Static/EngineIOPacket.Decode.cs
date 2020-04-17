@@ -75,18 +75,20 @@ namespace EngineIOSharp.Common.Packet
 
                 if (Response != null && Response.StatusCode == HttpStatusCode.OK)
                 {
-                    using (Response)
                     using (StreamReader Reader = new StreamReader(Response.GetResponseStream()))
                     {
                         string Content = Reader.ReadToEnd();
 
                         if (Content.Contains(':'))
                         {
-                            string Buffer = string.Empty;
-                            int Size = 0;
+                            string Buffer;
+                            int Size;
 
                             while (Content.Length > 0)
                             {
+                                Buffer = string.Empty;
+                                Size = 0;
+
                                 for (int i = 0; i < Content.Length; i++)
                                 {
                                     if (Content[i] != ':')
@@ -112,7 +114,7 @@ namespace EngineIOSharp.Common.Packet
 
                                 if (Buffer.StartsWith("b"))
                                 {
-                                    List<byte> RawBuffer = new List<byte>() { (byte)Buffer[1] };
+                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
                                     Buffer = Buffer.Substring(2);
 
                                     RawBuffer.AddRange(Convert.FromBase64String(Buffer));
