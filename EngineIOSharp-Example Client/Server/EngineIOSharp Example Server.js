@@ -1,4 +1,4 @@
-var engine = require('engine.io', { 'transports': [ 'websocket' ] });
+var engine = require('engine.io');
 var http = require('http').createServer();
 var server = engine.attach(http);
 

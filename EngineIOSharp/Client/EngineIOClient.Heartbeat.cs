@@ -22,7 +22,7 @@ namespace EngineIOSharp.Client
                 {
                     int PingInterval = Handshake.PingInterval;
 
-                    PingTimer = new Timer(1000);
+                    PingTimer = new Timer(PingInterval / 2.0);
                     PingTimer.Elapsed += (_, __) =>
                     {
                         SimpleMutex.Lock(PingMutex, () =>

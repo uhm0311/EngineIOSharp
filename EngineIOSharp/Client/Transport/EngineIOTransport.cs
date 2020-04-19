@@ -53,11 +53,6 @@ namespace EngineIOSharp.Client.Transport
 
         internal EngineIOTransport Send(params EngineIOPacket[] Packets)
         {
-            return Send(Packets as IEnumerable<EngineIOPacket>);
-        }
-
-        internal EngineIOTransport Send(IEnumerable<EngineIOPacket> Packets)
-        {
             if (Packets != null)
             {
                 if (ReadyState == EngineIOReadyState.OPEN)
@@ -86,8 +81,12 @@ namespace EngineIOSharp.Client.Transport
         protected EngineIOTransport OnOpen()
         {
             ReadyState = EngineIOReadyState.OPEN;
-            Writable = true;
             Emit(Event.OPEN);
+
+            if (Option.Query.ContainsKey("sid"))
+            {
+                Writable = true;
+            }
 
             return this;
         }
@@ -121,7 +120,7 @@ namespace EngineIOSharp.Client.Transport
 
         protected abstract void CloseInternal();
 
-        protected abstract void SendInternal(EngineIOPacket Packets);
+        protected abstract void SendInternal(EngineIOPacket Packet);
 
         internal static class Event
         {

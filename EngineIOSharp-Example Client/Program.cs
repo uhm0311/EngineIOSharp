@@ -33,9 +33,11 @@ namespace EngineIOSharp.Example.Client
 
                 while (!(line = Console.ReadLine())?.Trim()?.ToLower()?.Equals("/exit") ?? false)
                 {
+                    client.Send("Client says, ");
                     client.Send(line);
-                    client.Send(line);
-                    //client.Send(new byte[] { 0, 1, 2, 3, 4, 5 });
+
+                    client.Send("And this is also with hex decimal, ");
+                    client.Send(Encoding.UTF8.GetBytes(line));
                 }
             }
         }

@@ -20,7 +20,7 @@ namespace EngineIOSharp.Client
         public bool RemeberUpgrade { get; private set; }
 
         public bool WithCredentials { get; private set; }
-        public bool TimestampRequests { get; private set; }
+        public bool? TimestampRequests { get; private set; }
         public string TimestampParam { get; private set; }
 
         public bool Polling { get; private set; }
@@ -56,7 +56,7 @@ namespace EngineIOSharp.Client
         /// <param name="ClientCertificates">The collection of security certificates that are associated with each request.</param>
         /// <param name="ClientCertificateSelectionCallback">Callback used to select the certificate to supply to the server.</param>
         /// <param name="ServerCertificateValidationCallback">Callback method to validate the server certificate.</param>
-        public EngineIOClientOption(EngineIOScheme Scheme, string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool WithCredentials = true, bool TimestampRequests = true, string TimestampParam = "t", bool Polling = true, int PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
+        public EngineIOClientOption(EngineIOScheme Scheme, string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool WithCredentials = true, bool? TimestampRequests = null, string TimestampParam = "t", bool Polling = true, int PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
         {
             this.Scheme = Scheme;
             this.Host = Host;

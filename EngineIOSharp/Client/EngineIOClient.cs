@@ -3,6 +3,7 @@ using EngineIOSharp.Client.Transport;
 using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
+using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
 
@@ -19,6 +20,7 @@ namespace EngineIOSharp.Client
         private EngineIOTransport Transport = null;
 
         private readonly Queue<EngineIOPacket> PacketBuffer = new Queue<EngineIOPacket>();
+        private readonly object BufferMutex = new object();
         private int PreviousBufferSize = 0;
 
         private bool Upgrading = false;
@@ -147,7 +149,7 @@ namespace EngineIOSharp.Client
                                     CleanUp();
 
                                     SetTransport(Transport);
-                                    Transport.Send();
+                                    Transport.Send(EngineIOPacket.CreateUpgradePacket());
 
                                     Emit(Event.UPGRADE, Transport);
                                     Upgrading = false;
@@ -227,7 +229,7 @@ namespace EngineIOSharp.Client
         {
             if (ReadyState != EngineIOReadyState.CLOSED && Transport.Writable && !Upgrading && PacketBuffer.Count > 0)
             {
-                Transport.Send(PacketBuffer);
+                SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
                 PreviousBufferSize = PacketBuffer.Count;
 
                 Emit(Event.FLUSH);

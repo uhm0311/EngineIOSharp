@@ -1,5 +1,6 @@
 ﻿using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
+using SimpleThreadMonitor;
 using System;
 
 namespace EngineIOSharp.Client
@@ -31,7 +32,7 @@ namespace EngineIOSharp.Client
             if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
             {
                 Emit(Event.PACKET_CREATE, Packet);
-                PacketBuffer.Enqueue(Packet);
+                SimpleMutex.Lock(BufferMutex, () => PacketBuffer.Enqueue(Packet));
 
                 Once(Event.FLUSH, Callback);
                 Flush();

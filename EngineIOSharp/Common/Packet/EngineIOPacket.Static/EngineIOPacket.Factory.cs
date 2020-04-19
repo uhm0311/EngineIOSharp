@@ -47,6 +47,11 @@ namespace EngineIOSharp.Common.Packet
             return CreatePacket(EngineIOPacketType.MESSAGE, RawData);
         }
 
+        internal static EngineIOPacket CreateUpgradePacket()
+        {
+            return CreatePacket(EngineIOPacketType.UPGRADE);
+        }
+
         private static EngineIOPacket CreatePacket(EngineIOPacketType Type)
         {
             return new EngineIOPacket()

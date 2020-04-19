@@ -1,4 +1,4 @@
-var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', { 'transports' : [ 'polling' ]});
+var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', { 'timestampRequests' : true});
 
 socket.on('open', function () {
 	console.log('Connected!');
@@ -21,8 +21,11 @@ const readline = require('readline').createInterface({
 
 function onMessage (message) {
 	if (message != '/exit') {
+		socket.send('Client says, ');
 		socket.send(message);
-		socket.send(message);
+		
+		socket.send('Client says again, ');
+		socket.send('Hello world!');
 		
 		readline.question('', onMessage);
 	} else {

@@ -57,7 +57,7 @@ namespace EngineIOSharp.Common.Packet
                 else if (IsBinary)
                 {
                     List<byte> RawData = new List<byte>() { (byte)Type };
-                    RawData.AddRange(RawData);
+                    RawData.AddRange(this.RawData);
 
                     return RawData.ToArray();
                 }
