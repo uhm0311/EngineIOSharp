@@ -14,60 +14,57 @@ namespace EngineIOSharp.Client
 
         private ulong Pong = 0;
 
-        private void StartPing()
+        private void StartHeartbeat()
         {
             SimpleMutex.Lock(PingMutex, () =>
             {
-                if (PingTimer == null)
+                if (PingTimer == null && Handshake != null)
                 {
-                    PingTimer = new Timer(1000);
-                    PingTimer.Elapsed += (sender, e) =>
+                    int PingInterval = Handshake.PingInterval;
+
+                    PingTimer = new Timer(PingInterval / 2.0);
+                    PingTimer.Elapsed += (_, __) =>
                     {
                         SimpleMutex.Lock(PingMutex, () =>
                         {
                             PingTimer.Interval = PingInterval;
-
                             Send(EngineIOPacket.CreatePingPacket());
-                            StartPong();
-                        }, OnEngineIOError);
+
+                            SimpleMutex.Lock(PongMutex, () =>
+                            {
+                                if (PongTimer == null && Handshake != null)
+                                {
+                                    PongTimer = new Timer(Handshake.PingTimeout);
+                                    PongTimer.Elapsed += (___, ____) =>
+                                    {
+                                        SimpleMutex.Lock(PongMutex, () =>
+                                        {
+                                            if (Pong > 0)
+                                            {
+                                                Pong = 0;
+                                            }
+                                            else
+                                            {
+                                                OnClose("Heartbeat timeout");
+                                            }
+                                        });
+                                    };
+
+                                    PongTimer.AutoReset = false;
+                                }
+
+                                if (!PongTimer.Enabled)
+                                {
+                                    PongTimer.Start();
+                                }
+                            });
+                        });
                     };
 
                     PingTimer.AutoReset = true;
                     PingTimer.Start();
                 }
-            }, OnEngineIOError);
-        }
-
-        private void StartPong()
-        {
-            SimpleMutex.Lock(PongMutex, () =>
-            {
-                if (PongTimer == null)
-                {
-                    PongTimer = new Timer(PingTimeout);
-                    PongTimer.Elapsed += (sender, e) =>
-                    {
-                        SimpleMutex.Lock(PongMutex, () =>
-                        {
-                            if (Pong > 0)
-                            {
-                                Pong = 0;
-                            }
-                            else
-                            {
-                                Close();
-                            }
-                        }, OnEngineIOError);
-                    };
-
-                    PongTimer.AutoReset = false;
-                }
-
-                if (!PongTimer.Enabled)
-                {
-                    PongTimer.Start();
-                }
-            }, OnEngineIOError);
+            });
         }
 
         private void StopHeartbeat()
@@ -76,13 +73,13 @@ namespace EngineIOSharp.Client
             {
                 PingTimer?.Stop();
                 PingTimer = null;
-            }, OnEngineIOError);
+            });
 
             SimpleMutex.Lock(PongMutex, () =>
             {
                 PongTimer?.Stop();
                 PongTimer = null;
-            }, OnEngineIOError);
+            });
         }
     }
 }

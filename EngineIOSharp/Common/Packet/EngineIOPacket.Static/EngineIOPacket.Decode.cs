@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Net;
 using System.Text;
 using WebSocketSharp;
 
@@ -26,9 +28,9 @@ namespace EngineIOSharp.Common.Packet
 
                 return Packet;
             } 
-            catch (Exception ex)
+            catch (Exception Exception)
             {
-                throw new EngineIOException("Packet decoding failed. " + Data, ex);
+                throw new EngineIOException("Packet decoding failed. " + Data, Exception);
             }
         }
 
@@ -52,7 +54,7 @@ namespace EngineIOSharp.Common.Packet
 
                 return Packet;
             }
-            catch (Exception ex)
+            catch (Exception Exception)
             {
                 StringBuilder Builder = new StringBuilder();
 
@@ -61,7 +63,77 @@ namespace EngineIOSharp.Common.Packet
                     Builder.Append(BitConverter.ToString(RawData));
                 }
 
-                throw new EngineIOException("Packet decoding failed. " + Builder, ex);
+                throw new EngineIOException("Packet decoding failed. " + Builder, Exception);
+            }
+        }
+
+        internal static EngineIOPacket[] Decode(HttpWebResponse Response)
+        {
+            try
+            {
+                List<EngineIOPacket> Result = new List<EngineIOPacket>();
+
+                if (Response != null && Response.StatusCode == HttpStatusCode.OK)
+                {
+                    using (StreamReader Reader = new StreamReader(Response.GetResponseStream()))
+                    {
+                        string Content = Reader.ReadToEnd();
+
+                        if (Content.Contains(':'))
+                        {
+                            string Buffer;
+                            int Size;
+
+                            while (Content.Length > 0)
+                            {
+                                Buffer = string.Empty;
+                                Size = 0;
+
+                                for (int i = 0; i < Content.Length; i++)
+                                {
+                                    if (Content[i] != ':')
+                                    {
+                                        Buffer += Content[i];
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                Size = int.Parse(Buffer);
+                                Content = Content.Substring(Buffer.Length + 1);
+                                Buffer = string.Empty;
+
+                                for (int i = 0; i < Size; i++)
+                                {
+                                    Buffer += Content[i];
+                                }
+
+                                Content = Content.Substring(Buffer.Length);
+
+                                if (Buffer.StartsWith("b"))
+                                {
+                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
+                                    Buffer = Buffer.Substring(2);
+
+                                    RawBuffer.AddRange(Convert.FromBase64String(Buffer));
+                                    Result.Add(Decode(RawBuffer.ToArray()));
+                                }
+                                else
+                                {
+                                    Result.Add(Decode(Buffer));
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return Result.ToArray();
+            } 
+            catch (Exception Exception)
+            {
+                throw new EngineIOException("Packet decoding failed. " + Response, Exception);
             }
         }
 

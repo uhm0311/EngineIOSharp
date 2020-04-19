@@ -1,54 +1,41 @@
-﻿using EngineIOSharp.Client.Event;
-using EngineIOSharp.Common;
+﻿using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
+using SimpleThreadMonitor;
 using System;
 
 namespace EngineIOSharp.Client
 {
     partial class EngineIOClient
     {
-        public void Send(string Data, Action Callback = null)
+        public EngineIOClient Send(string Data, Action Callback = null)
         {
             if (!string.IsNullOrEmpty(Data))
             {
                 Send(EngineIOPacket.CreateMessagePacket(Data), Callback);
             }
+
+            return this;
         }
 
-        public void Send(byte[] RawData, Action Callback = null)
+        public EngineIOClient Send(byte[] RawData, Action Callback = null)
         {
             if ((RawData?.Length ?? 0) > 0)
             {
                 Send(EngineIOPacket.CreateMessagePacket(RawData), Callback);
             }
+
+            return this;
         }
 
         internal void Send(EngineIOPacket Packet, Action Callback = null)
         {
-            try
+            if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
             {
-                CallEventHandler(EngineIOClientEvent.PACKET_CREATE, Packet);
+                Emit(Event.PACKET_CREATE, Packet);
+                SimpleMutex.Lock(BufferMutex, () => PacketBuffer.Enqueue(Packet));
 
-                if (IsAlive && Packet != null && (Packet.IsText || Packet.IsBinary))
-                {
-                    if (Packet.IsText)
-                    {
-                        WebSocketClient.Send(Packet.Encode() as string);
-                    }
-                    else if (Packet.IsBinary)
-                    {
-                        WebSocketClient.Send(Packet.Encode() as byte[]);
-                    }
-
-                    CallEventHandler(EngineIOClientEvent.FLUSH, Packet);
-                    CallEventHandler(EngineIOClientEvent.DRAIN);
-
-                    Callback?.Invoke();
-                }
-            }
-            catch (Exception Exception)
-            {
-                OnEngineIOError(new EngineIOException("Failed to send packet. " + Packet, Exception));
+                Once(Event.FLUSH, Callback);
+                Flush();
             }
         }
     }

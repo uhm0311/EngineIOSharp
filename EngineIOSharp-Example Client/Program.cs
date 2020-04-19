@@ -1,7 +1,7 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Client.Event;
 using EngineIOSharp.Common.Enum;
 using System;
+using System.Text;
 
 namespace EngineIOSharp.Example.Client
 {
@@ -9,19 +9,19 @@ namespace EngineIOSharp.Example.Client
     {
         static void Main(string[] args)
         {
-            using (EngineIOClient client = new EngineIOClient(WebSocketScheme.ws, "127.0.0.1", 1009))
+            using (EngineIOClient client = new EngineIOClient(new EngineIOClientOption(EngineIOScheme.http, "localhost", 1009)))
             {
-                client.On(EngineIOClientEvent.OPEN, () =>
+                client.OnOpen(() =>
                 {
                     Console.WriteLine("Conencted!");
                 });
 
-                client.On(EngineIOClientEvent.MESSAGE, (Packet) =>
+                client.OnMessage((Packet) =>
                 {
                     Console.WriteLine("Server : " + Packet.Data);
                 });
 
-                client.On(EngineIOClientEvent.CLOSE, () =>
+                client.OnClose(() =>
                 {
                     Console.WriteLine("Disconnected!");
                 });
@@ -33,7 +33,11 @@ namespace EngineIOSharp.Example.Client
 
                 while (!(line = Console.ReadLine())?.Trim()?.ToLower()?.Equals("/exit") ?? false)
                 {
+                    client.Send("Client says, ");
                     client.Send(line);
+
+                    client.Send("And this is also with hex decimal, ");
+                    client.Send(Encoding.UTF8.GetBytes(line));
                 }
             }
         }
