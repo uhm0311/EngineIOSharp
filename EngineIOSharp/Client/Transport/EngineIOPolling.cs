@@ -146,12 +146,22 @@ namespace EngineIOSharp.Client.Transport
                         {
                             foreach (string Key in new List<string>(Option.ExtraHeaders.Keys))
                             {
-                                try { Request.Headers.Add(Key, Option.ExtraHeaders[Key]); }
-                                catch { }
+                                try
+                                {
+                                    bool IsAutorization = Key.ToLower().Trim().Equals("authorization");
+
+                                    if (!IsAutorization || (IsAutorization && Option.WithCredentials))
+                                    {
+                                        Request.Headers.Add(Key, Option.ExtraHeaders[Key]);
+                                    }
+                                }
+                                catch 
+                                {
+                                }
                             }
                         }
 
-                        if (Option.ClientCertificates != null)
+                        if (Option.WithCredentials && Option.ClientCertificates != null)
                         {
                             Request.ClientCertificates = Option.ClientCertificates;
                         }
@@ -168,6 +178,11 @@ namespace EngineIOSharp.Client.Transport
                         {
                             if (Response.StatusCode == HttpStatusCode.OK)
                             {
+                                if (Option.WithCredentials)
+                                {
+                                    Cookies.Add(Response.Cookies);
+                                }
+
                                 if (Method == HttpMethod.GET)
                                 {
                                     EngineIOPacket[] Packets = EngineIOPacket.Decode(Response);
