@@ -57,7 +57,7 @@ namespace EngineIOSharp.Common.Packet
                 else if (IsBinary)
                 {
                     List<byte> RawData = new List<byte>() { (byte)Type };
-                    RawData.AddRange(RawData);
+                    RawData.AddRange(this.RawData);
 
                     return RawData.ToArray();
                 }
@@ -66,9 +66,9 @@ namespace EngineIOSharp.Common.Packet
                     throw new EngineIOException("Packet encoding failed. " + this);
                 }
             }
-            catch (Exception ex)
+            catch (Exception Exception)
             {
-                throw new EngineIOException("Packet encoding failed. " + this, ex);
+                throw new EngineIOException("Packet encoding failed. " + this, Exception);
             }
         }
     }

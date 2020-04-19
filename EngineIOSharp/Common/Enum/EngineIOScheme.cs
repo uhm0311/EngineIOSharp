@@ -1,8 +1,11 @@
 ﻿namespace EngineIOSharp.Common.Enum
 {
-    public enum WebSocketScheme
+    public enum EngineIOScheme
     {
+        http,
+        https,
+
         ws,
         wss,
-    };
+    }
 }

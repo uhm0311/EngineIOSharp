@@ -2,7 +2,7 @@
 using System.Linq;
 using System.Security.Cryptography;
 
-namespace EngineIOSharp.Common
+namespace EngineIOSharp.Common.Static
 {
     /// <summary>
     /// C# implementaion of <see href="https://github.com/faeldt/base64id">base64id</see>

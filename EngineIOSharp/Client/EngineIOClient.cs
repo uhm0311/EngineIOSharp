@@ -1,102 +1,102 @@
-﻿using EngineIOSharp.Common.Enum;
-using EngineIOSharp.Server;
+﻿using EmitterSharp;
+using EngineIOSharp.Client.Transport;
+using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum;
+using EngineIOSharp.Common.Packet;
 using SimpleThreadMonitor;
 using System;
-using System.Net;
-using WebSocketSharp;
-using WebSocketSharp.Net.WebSockets;
+using System.Collections.Generic;
 
 namespace EngineIOSharp.Client
 {
-    public partial class EngineIOClient : IDisposable
+    public partial class EngineIOClient : Emitter<EngineIOClient, string, object>, IDisposable
     {
-        private static readonly string URIFormat = "{0}://{1}:{2}/engine.io/?EIO=3&transport=websocket";
+        private static bool PriorWebsocketSuccess = false;
 
-        private readonly object ClientMutex = new object();
+        public EngineIOClientOption Option { get; private set; }
+        public EngineIOHandshake Handshake { get; private set; }
+        public EngineIOReadyState ReadyState { get; private set; }
 
-        public WebSocket WebSocketClient { get; private set; }
-        public string URI { get; private set; }
+        private EngineIOTransport Transport = null;
 
-        public int PingInterval { get; private set; }
-        public int PingTimeout { get; private set; }
+        private readonly Queue<EngineIOPacket> PacketBuffer = new Queue<EngineIOPacket>();
+        private readonly object BufferMutex = new object();
+        private int PreviousBufferSize = 0;
 
-        public uint AutoReconnect { get; set; }
-        public bool IsAlive
+        private bool Upgrading = false;
+
+        public EngineIOClient(EngineIOClientOption Option)
         {
-            get
+            this.Option = Option;
+            ReadyState = EngineIOReadyState.CLOSED;
+        }
+
+        public EngineIOClient Connect()
+        {
+            if (ReadyState == EngineIOReadyState.CLOSED)
             {
-                return WebSocketClient.IsAlive;
+                EngineIOTransport Transport;
+                ReadyState = EngineIOReadyState.OPENING;
+
+                if (Option.WebSocket && (!Option.Polling || (Option.RemeberUpgrade && PriorWebsocketSuccess)))
+                {
+                    Transport = new EngineIOWebSocket(Option);
+                }
+                else
+                {
+                    Transport = new EngineIOPolling(Option);
+                }
+
+                SetTransport(Transport);
             }
+
+            return this;
         }
 
-        public string SID { get; private set; }
-
-        public EngineIOClient(WebSocketScheme Scheme, string Host, int Port, uint AutoReconnect = 0) 
+        public EngineIOClient Close()
         {
-            Initialize(string.Format(URIFormat, Scheme, Host, Port), AutoReconnect);
-        }
-
-        public EngineIOClient(string URI, uint AutoReconnect = 0)
-        {
-            Initialize(URI, AutoReconnect);
-        }
-
-        internal EngineIOClient(WebSocketContext Context, string SID)
-        {
-            this.SID = SID;
-
-            URI = Context.RequestUri.ToString();
-            AutoReconnect = 0;
-
-            Initialize(Context.WebSocket);
-        }
-
-        private void Initialize(string URI, uint AutoReconnect)
-        {
-            this.URI = URI;
-            this.AutoReconnect = AutoReconnect;
-
-            Initialize();
-        }
-
-        private void Initialize(WebSocket Client)
-        {
-            Action<LogData, string> LogOutput = WebSocketClient?.Log?.Output ?? ((_, __) => { });
-            WebSocketClient = Client;
-
-            WebSocketClient.Log.Output = LogOutput;
-            WebSocketClient.OnOpen += OnWebSocketOpen;
-            WebSocketClient.OnClose += OnWebSocketClose;
-            WebSocketClient.OnMessage += OnWebSocketMessage;
-            WebSocketClient.OnError += OnWebSocketError;
-        }
-
-        private void Initialize()
-        {
-            Initialize(new WebSocket(URI));
-        }
-
-        public void Connect()
-        {
-            SimpleMutex.Lock(ClientMutex, () =>
+            if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
             {
-                if (!IsAlive)
-                {
-                    WebSocketClient.Connect();
-                }
-            }, OnEngineIOError);
-        }
+                ReadyState = EngineIOReadyState.CLOSING;
 
-        public void Close()
-        {
-            SimpleMutex.Lock(ClientMutex, () =>
-            {
-                if (IsAlive)
+                void Close()
                 {
-                    WebSocketClient.Close();
-                    StopHeartbeat();
+                    this.OnClose("Forced close");
+                    Transport.Close();
                 }
-            }, OnEngineIOError);
+
+                void CleanUpAndClose()
+                {
+                    Off(Event.UPGRADE, CleanUpAndClose);
+                    Off(Event.UPGRADE_ERROR, CleanUpAndClose);
+
+                    Close();
+                }
+
+                void OnClose()
+                {
+                    if (Upgrading)
+                    {
+                        Once(Event.UPGRADE, CleanUpAndClose);
+                        Once(Event.UPGRADE_ERROR, CleanUpAndClose);
+                    }
+                    else
+                    {
+                        Close();
+                    }
+                }
+
+                if (PacketBuffer.Count > 0)
+                {
+                    Once(Event.DRAIN, OnClose);
+                }
+                else
+                {
+                    OnClose();
+                }
+            }
+
+            return this;
         }
 
         public void Dispose()
@@ -104,21 +104,264 @@ namespace EngineIOSharp.Client
             Close();
         }
 
-        public override bool Equals(object o)
+        private void SetTransport(EngineIOTransport Transport)
         {
-            if (o is EngineIOClient)
+            if (this.Transport != null)
             {
-                EngineIOClient Temp = o as EngineIOClient;
-
-                return Temp.GetHashCode() == GetHashCode();
+                this.Transport.Off();
             }
 
-            return false;
+            this.Transport = Transport
+                .On(EngineIOTransport.Event.DRAIN, OnDrain)
+                .On(EngineIOTransport.Event.PACKET, (Packet) => OnPacket(Packet as EngineIOPacket))
+                .On(EngineIOTransport.Event.ERROR, (Exception) => OnError(Exception as Exception))
+                .On(EngineIOTransport.Event.CLOSE, () => OnClose("Transport close."))
+                .Open();
         }
 
-        public override int GetHashCode()
+        private void Probe()
         {
-            return SID?.GetHashCode() ?? base.GetHashCode();
+            EngineIOWebSocket Transport = new EngineIOWebSocket(Option);
+            bool Failed = PriorWebsocketSuccess = false;
+
+            void OnTransportOpen()
+            {
+                string Message = "probe";
+
+                Transport.Send(EngineIOPacket.CreatePingPacket(Message));
+                Transport.Once(EngineIOTransport.Event.PACKET, (Packet) =>
+                {
+                    if (!Failed)
+                    {
+                        EngineIOPacket Temp = Packet is EngineIOPacket ? Packet as EngineIOPacket : EngineIOPacket.CreateClosePacket();
+
+                        if (Temp.Type == EngineIOPacketType.PONG && Temp.Data.Equals(Message))
+                        {
+                            Upgrading = true;
+                            Emit(Event.UPGRADING, Transport);
+
+                            PriorWebsocketSuccess = true;
+
+                            (this.Transport as EngineIOPolling).Pause(() =>
+                            {
+                                if (!Failed && ReadyState != EngineIOReadyState.CLOSED)
+                                {
+                                    CleanUp();
+
+                                    SetTransport(Transport);
+                                    Transport.Send(EngineIOPacket.CreateUpgradePacket());
+
+                                    Emit(Event.UPGRADE, Transport);
+                                    Upgrading = false;
+
+                                    Flush();
+                                }
+                            });
+                        }
+                        else
+                        {
+                            Emit(Event.UPGRADE_ERROR, new EngineIOException("Probe error"));
+                        }
+                    }
+                });
+            }
+
+            void OnTransportClose()
+            {
+                OnTransportError(new EngineIOException("Transport closed"));
+            }
+
+            void OnTransportError(object Exception)
+            {
+                string Message = "Probe error";
+                Exception = Exception is Exception ? new EngineIOException(Message, Exception as Exception) : new EngineIOException(Message);
+
+                FreezeTransport();
+                Emit(Event.UPGRADE_ERROR, Exception as Exception);
+            }
+
+            void FreezeTransport()
+            {
+                if (!Failed)
+                {
+                    Failed = true;
+                    CleanUp();
+
+                    Transport.Close();
+                    Transport = null;
+                }
+            }
+
+            void OnClose()
+            {
+                OnError(new EngineIOException("Client closed"));
+            }
+
+            void OnUpgrade()
+            {
+                if (!(Transport is EngineIOWebSocket))
+                {
+                    FreezeTransport();
+                }
+            }
+
+            void CleanUp()
+            {
+                Transport.Off(EngineIOTransport.Event.OPEN, OnTransportOpen);
+                Transport.Off(EngineIOTransport.Event.ERROR, OnTransportError);
+                Transport.Off(EngineIOTransport.Event.CLOSE, OnTransportClose);
+
+                Off(Event.CLOSE, OnClose);
+                Off(Event.UPGRADING, OnUpgrade);
+            }
+
+            Transport.Once(EngineIOTransport.Event.OPEN, OnTransportOpen);
+            Transport.Once(EngineIOTransport.Event.ERROR, OnTransportError);
+            Transport.Once(EngineIOTransport.Event.CLOSE, OnTransportClose);
+
+            Once(Event.CLOSE, OnClose);
+            Once(Event.UPGRADING, OnUpgrade);
+
+            Transport.Open();
+        }
+
+        private void Flush()
+        {
+            if (ReadyState != EngineIOReadyState.CLOSED && Transport.Writable && !Upgrading && PacketBuffer.Count > 0)
+            {
+                SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
+                PreviousBufferSize = PacketBuffer.Count;
+
+                Emit(Event.FLUSH);
+            }
+        }
+
+        private void OnOpen()
+        {
+            ReadyState = EngineIOReadyState.OPEN;
+            PriorWebsocketSuccess = Transport is EngineIOWebSocket;
+
+            Emit(Event.OPEN);
+            Flush();
+
+            if (ReadyState == EngineIOReadyState.OPEN && Option.Upgrade && Option.WebSocket && Transport is EngineIOPolling)
+            {
+                foreach (string Upgrade in Handshake.Upgrades)
+                {
+                    if (Upgrade.Trim().ToLower().Equals("websocket"))
+                    {
+                        Probe();
+                        break;
+                    }
+                }
+            }
+        }
+
+        private void OnClose(string Message, Exception Description = null)
+        {
+            if (ReadyState != EngineIOReadyState.CLOSED)
+            {
+                StopHeartbeat();
+
+                Transport.Off(EngineIOTransport.Event.CLOSE);
+                Transport.Close();
+                Transport.Off();
+
+                ReadyState = EngineIOReadyState.CLOSED;
+                Handshake = null;
+
+                Emit(Event.CLOSE, new EngineIOException(Message, Description));
+
+                PacketBuffer.Clear();
+                PreviousBufferSize = 0;
+            }
+        }
+
+        private void OnPacket(EngineIOPacket Packet)
+        {
+            if (ReadyState != EngineIOReadyState.CLOSED)
+            {
+                Emit(Event.PACKET, Packet);
+
+                switch (Packet.Type)
+                {
+                    case EngineIOPacketType.OPEN:
+                        Emit(Event.HANDSHAKE);
+
+                        Handshake = new EngineIOHandshake(Packet.Data);
+                        Option.Query.Add("sid", Handshake.SID);
+
+                        OnOpen();
+
+                        if (ReadyState != EngineIOReadyState.CLOSED)
+                        {
+                            StartHeartbeat();
+                        }
+                        break;
+
+                    case EngineIOPacketType.PING:
+                        Send(EngineIOPacket.CreatePongPacket(Packet.Data));
+                        break;
+
+                    case EngineIOPacketType.PONG:
+                        Pong++;
+                        break;
+
+                    case EngineIOPacketType.MESSAGE:
+                        Emit(Event.MESSAGE, Packet);
+                        break;
+
+                    case EngineIOPacketType.UNKNOWN:
+                        OnError(new EngineIOException(string.Format("Server error : {0}", Packet.Data)));
+                        break;
+                }
+            }
+        }
+
+        private void OnDrain()
+        {
+            while (PreviousBufferSize > 0)
+            {
+                PacketBuffer.Dequeue();
+                PreviousBufferSize--;
+            }
+
+            if (PacketBuffer.Count == 0)
+            {
+                Emit(Event.DRAIN);
+            }
+            else
+            {
+                Flush();
+            }
+        }
+
+        private void OnError(Exception Exception)
+        {
+            PriorWebsocketSuccess = false;
+
+            Emit(Event.ERROR, Exception);
+            OnClose("Transport error", Exception);
+        }
+
+        public static class Event
+        {
+            public static readonly string OPEN = "open";
+            public static readonly string HANDSHAKE = "handshake";
+
+            public static readonly string ERROR = "error";
+            public static readonly string CLOSE = "close";
+
+            public static readonly string PACKET = "packet";
+            public static readonly string MESSAGE = "message";
+
+            public static readonly string PACKET_CREATE = "packetCreate";
+            public static readonly string FLUSH = "flush";
+            public static readonly string DRAIN = "drain";
+
+            public static readonly string UPGRADE = "upgrade";
+            public static readonly string UPGRADING = "upgrading";
+            public static readonly string UPGRADE_ERROR = "upgradeError";
         }
     }
 }
