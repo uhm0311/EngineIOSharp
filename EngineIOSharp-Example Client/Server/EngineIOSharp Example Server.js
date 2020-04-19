@@ -1,9 +1,6 @@
 var engine = require('engine.io', { 'transports': [ 'websocket' ] });
 var http = require('http').createServer();
-var server = engine.attach(http, { 
-	pingTimeout: 1000000,
-	pingInterval: 1000000
-});
+var server = engine.attach(http);
 
 var port = 1009;
 
