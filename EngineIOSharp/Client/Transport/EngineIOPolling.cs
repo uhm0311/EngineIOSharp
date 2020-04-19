@@ -136,11 +136,16 @@ namespace EngineIOSharp.Client.Transport
                         URL.Append(string.Format("{0}={1}", Option.TimestampParam, EngineIOTimestamp.Generate()));
 
                         HttpWebRequest Request = WebRequest.Create(URL.ToString()) as HttpWebRequest;
-                        Request.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
+                        Request.Timeout = Option.PollingTimeout == 0 ? Timeout.Infinite : Option.PollingTimeout;
                         Request.ServicePoint.Expect100Continue = false;
                         Request.Method = Method.ToString();
                         Request.CookieContainer = Cookies;
                         Request.KeepAlive = false;
+
+                        if (Option.WithCredentials)
+                        {
+                            Request.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
+                        }
 
                         if (Option.ExtraHeaders.Count > 0)
                         {
