@@ -203,7 +203,9 @@ namespace EngineIOSharp.Client.Transport
 
             if (Option.WithCredentials)
             {
+#if !NET40
                 Request.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
+#endif
 
                 if (Option.ClientCertificates != null)
                 {

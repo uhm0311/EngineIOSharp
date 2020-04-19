@@ -1,27 +1,27 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-  <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">net45;netstandard2.0</TargetFrameworks>
-  <TargetFrameworks Condition="'$(LibraryFrameworks)'!=''">$(LibraryFrameworks)</TargetFrameworks>
-  <RootNamespace>EngineIOSharp</RootNamespace>
-    <AssemblyName>EngineIOSharp</AssemblyName>
-    <FileAlignment>512</FileAlignment>
-  <Authors>uhm0311</Authors>
-  <Company>uhm0311</Company>
-  <Title>Engine.IO</Title>
-  <Copyright>Copyright (c) 2020 uhm0311</Copyright>
-  <Description>C# implementation of Engine.IO protocol client and server.</Description>
-  <PackageId>EngineIOSharp</PackageId>
-    <PackageTags>Engine.IO;EngineIO</PackageTags>
-    <PackageProjectUrl>https://github.com/uhm0311/EngineIOSharp</PackageProjectUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
-  <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
-  <PackageIcon>icon.png</PackageIcon>
-  <MinClientVersion>2.12</MinClientVersion>
-  <PackageVersion>1.0.0</PackageVersion>
-  <PackageReleaseNotes>First release.</PackageReleaseNotes>
+    <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">net45;net40;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(LibraryFrameworks)'!=''">$(LibraryFrameworks)</TargetFrameworks>
+    <RootNamespace>EngineIOSharp</RootNamespace>
+      <AssemblyName>EngineIOSharp</AssemblyName>
+      <FileAlignment>512</FileAlignment>
+    <Authors>uhm0311</Authors>
+    <Company>uhm0311</Company>
+    <Title>Engine.IO</Title>
+    <Copyright>Copyright (c) 2020 uhm0311</Copyright>
+    <Description>C# implementation of Engine.IO protocol client and server.</Description>
+    <PackageId>EngineIOSharp</PackageId>
+      <PackageTags>Engine.IO;EngineIO</PackageTags>
+      <PackageProjectUrl>https://github.com/uhm0311/EngineIOSharp</PackageProjectUrl>
+      <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+      <RepositoryType>git</RepositoryType>
+      <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
+    <PackageIcon>icon.png</PackageIcon>
+    <MinClientVersion>2.12</MinClientVersion>
+    <PackageVersion>1.0.0</PackageVersion>
+    <PackageReleaseNotes>First release.</PackageReleaseNotes>
   </PropertyGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net45' OR '$(TargetFramework)'=='net40'">
     <PackageReference Include="websocket-sharp-customheaders" Version="1.0.2.31869" />
