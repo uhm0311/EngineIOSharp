@@ -4,6 +4,7 @@ using EngineIOSharp.Common.Static;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -195,6 +196,7 @@ namespace EngineIOSharp.Client.Transport
             }
 
             HttpWebRequest Request = WebRequest.Create(URL.ToString()) as HttpWebRequest;
+            Request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
             Request.Timeout = Option.PollingTimeout == 0 ? Timeout.Infinite : Option.PollingTimeout;
             Request.ServicePoint.Expect100Continue = false;
             Request.Method = Method.ToString();

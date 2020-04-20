@@ -1,4 +1,5 @@
-﻿using EngineIOSharp.Common.Enum;
+﻿using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum;
 using System;
 using System.Collections.Generic;
 using System.Net.Security;
@@ -63,7 +64,7 @@ namespace EngineIOSharp.Client
             this.Port = Port;
             this.PolicyPort = PolicyPort;
 
-            this.Path = Path ?? string.Empty;
+            this.Path = EngineIOOption.PolishPath(Path);
             this.Query = new Dictionary<string, string>(Query ?? new Dictionary<string, string>());
 
             this.Upgrade = Upgrade;
@@ -83,7 +84,7 @@ namespace EngineIOSharp.Client
 
             this.ClientCertificates = ClientCertificates;
             this.ClientCertificateSelectionCallback = ClientCertificateSelectionCallback ?? DefaultClientCertificateSelectionCallback;
-            this.ServerCertificateValidationCallback = ServerCertificateValidationCallback ?? DefaultServerCertificateValidationCallback;
+            this.ServerCertificateValidationCallback = ServerCertificateValidationCallback ?? EngineIOOption.DefaultCertificateValidationCallback;
 
             if (string.IsNullOrWhiteSpace(Host))
             {
@@ -114,23 +115,11 @@ namespace EngineIOSharp.Client
             {
                 this.Query.Remove("b64");
             }
-
-            while (this.Path.IndexOf('/') != this.Path.LastIndexOf('/') && this.Path.EndsWith("/"))
-            {
-                this.Path = this.Path.Substring(0, this.Path.Length - 1);
-            }
-
-            this.Path += '/';
         }
 
         private static X509Certificate DefaultClientCertificateSelectionCallback(object _1, string _2, X509CertificateCollection _3, X509Certificate _4, string[] _5)
         {
             return null;
-        }
-
-        private static bool DefaultServerCertificateValidationCallback(object _1, X509Certificate _2, X509Chain _3, SslPolicyErrors _4)
-        {
-            return true;
         }
     }
 }
