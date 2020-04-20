@@ -1,10 +1,12 @@
-﻿using EngineIOSharp.Common.Packet;
+﻿using EngineIOSharp.Common;
+using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading;
 using WebSocketSharp;
+using EngineIOScheme = EngineIOSharp.Common.Enum.Internal.EngineIOScheme;
 
 namespace EngineIOSharp.Client.Transport
 {
@@ -17,7 +19,7 @@ namespace EngineIOSharp.Client.Transport
         public EngineIOWebSocket(EngineIOClientOption Option) : base(Option)
         {
             StringBuilder URL = new StringBuilder();
-            URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme + 2, Option.Host, Option.Port, Option.Path)).Append('?');
+            URL.Append(string.Format("{0}://{1}:{2}{3}", (EngineIOScheme)(Option.Scheme + 2), Option.Host, Option.Port, Option.Path)).Append('?');
 
             foreach (string Key in new List<string>(Option.Query.Keys))
             {

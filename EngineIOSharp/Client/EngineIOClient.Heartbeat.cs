@@ -20,7 +20,7 @@ namespace EngineIOSharp.Client
             {
                 if (PingTimer == null && Handshake != null)
                 {
-                    int PingInterval = Handshake.PingInterval;
+                    long PingInterval = Handshake.PingInterval;
 
                     PingTimer = new Timer(PingInterval / 2.0);
                     PingTimer.Elapsed += (_, __) =>

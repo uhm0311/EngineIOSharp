@@ -8,8 +8,8 @@ namespace EngineIOSharp.Common
 
         public string SID { get; private set; }
         public string[] Upgrades { get; private set; }
-        public int PingInterval { get; private set; }
-        public int PingTimeout { get; private set; }
+        public long PingInterval { get; private set; }
+        public long PingTimeout { get; private set; }
 
         internal EngineIOHandshake(string JSON)
         {
@@ -17,8 +17,8 @@ namespace EngineIOSharp.Common
 
             SID = this.JSON["sid"].ToString();
             Upgrades = this.JSON["upgrades"].ToObject<string[]>();
-            PingInterval = this.JSON["pingInterval"].ToObject<int>();
-            PingTimeout = this.JSON["pingTimeout"].ToObject<int>();
+            PingInterval = this.JSON["pingInterval"].ToObject<long>();
+            PingTimeout = this.JSON["pingTimeout"].ToObject<long>();
         }
 
         public override string ToString()

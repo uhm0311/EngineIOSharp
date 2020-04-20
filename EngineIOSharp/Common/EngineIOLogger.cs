@@ -1,7 +1,7 @@
 ﻿using System;
 using WebSocketSharp;
 
-namespace EngineIOSharp
+namespace EngineIOSharp.Common
 {
     public static class EngineIOLogger
     {
