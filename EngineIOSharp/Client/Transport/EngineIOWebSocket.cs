@@ -12,6 +12,8 @@ namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOWebSocket : EngineIOTransport
     {
+        public static readonly string Name = "websocket";
+
         private readonly Semaphore Semaphore;
 
         private readonly WebSocket WebSocket;

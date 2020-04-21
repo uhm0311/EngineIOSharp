@@ -30,7 +30,9 @@ namespace EngineIOSharp.Common.Packet
             } 
             catch (Exception Exception)
             {
-                throw new EngineIOException("Packet decoding failed. " + Data, Exception);
+                EngineIOLogger.Error("Packet decoding failed. " + Data, Exception);
+
+                return CreateErrorPacket(Exception);
             }
         }
 
@@ -56,19 +58,16 @@ namespace EngineIOSharp.Common.Packet
             }
             catch (Exception Exception)
             {
-                StringBuilder Builder = new StringBuilder();
+                EngineIOLogger.Error("Packet decoding failed. " + RawData != null ? BitConverter.ToString(RawData) : string.Empty, Exception);
 
-                if (RawData != null)
-                {
-                    Builder.Append(BitConverter.ToString(RawData));
-                }
-
-                throw new EngineIOException("Packet decoding failed. " + Builder, Exception);
+                return CreateErrorPacket(Exception);
             }
         }
 
         internal static EngineIOPacket[] Decode(HttpWebResponse Response)
         {
+            string Temp = string.Empty;
+
             try
             {
                 List<EngineIOPacket> Result = new List<EngineIOPacket>();
@@ -78,6 +77,7 @@ namespace EngineIOSharp.Common.Packet
                     using (StreamReader Reader = new StreamReader(Response.GetResponseStream()))
                     {
                         string Content = Reader.ReadToEnd();
+                        Temp = Content;
 
                         if (Content.Contains(':'))
                         {
@@ -133,7 +133,9 @@ namespace EngineIOSharp.Common.Packet
             } 
             catch (Exception Exception)
             {
-                throw new EngineIOException("Packet decoding failed. " + Response, Exception);
+                EngineIOLogger.Error("Packet decoding failed. " + Temp, Exception);
+
+                return new EngineIOPacket[] { CreateErrorPacket(Exception) };
             }
         }
 

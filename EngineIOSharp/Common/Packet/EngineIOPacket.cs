@@ -42,29 +42,52 @@ namespace EngineIOSharp.Common.Packet
             return Builder.ToString();
         }
 
-        internal object Encode()
+        internal object Encode(bool Http = false)
         {
             try
             {
-                if (IsText)
+                if (IsText || IsBinary)
                 {
-                    StringBuilder Builder = new StringBuilder();
-                    Builder.Append((int)Type);
-                    Builder.Append(Data);
+                    if (Http)
+                    {
+                        StringBuilder Builder = new StringBuilder();
+                        Builder.Append((int)Type);
+                        Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
 
-                    return Builder.ToString();
-                }
-                else if (IsBinary)
-                {
-                    List<byte> RawData = new List<byte>() { (byte)Type };
-                    RawData.AddRange(this.RawData);
+                        int Length = Encoding.UTF8.GetByteCount(Builder.ToString());
 
-                    return RawData.ToArray();
+                        if (IsText)
+                        {
+                            Builder.Insert(0, string.Format("{0}:", Length));
+                        }
+                        else
+                        {
+                            Builder.Insert(0, string.Format("{0}:b", Length + 1));
+                        }
+
+                        return Builder.ToString();
+                    }
+                    else
+                    {
+                        if (IsText)
+                        {
+                            StringBuilder Builder = new StringBuilder();
+                            Builder.Append((int)Type);
+                            Builder.Append(Data);
+
+                            return Builder.ToString();
+                        }
+                        else if (IsBinary)
+                        {
+                            List<byte> RawData = new List<byte>() { (byte)Type };
+                            RawData.AddRange(this.RawData);
+
+                            return RawData.ToArray();
+                        }
+                    }
                 }
-                else
-                {
-                    throw new EngineIOException("Packet encoding failed. " + this);
-                }
+
+                throw new EngineIOException("Packet encoding failed. " + this);
             }
             catch (Exception Exception)
             {

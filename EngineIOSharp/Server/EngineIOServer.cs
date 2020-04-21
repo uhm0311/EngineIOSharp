@@ -1,22 +1,23 @@
 ﻿using EmitterSharp;
-using EngineIOSharp.Client;
+using EngineIOSharp.Common;
+using EngineIOSharp.Common.Static;
+using EngineIOSharp.Server.Client;
+using EngineIOSharp.Server.Client.Transport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.IO.Ports;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
+using WebSocketSharp.Net;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
 {
-    public class EngineIOServer : Emitter<EngineIOServer, string, object>, IDisposable
+    public partial class EngineIOServer : Emitter<EngineIOServer, string, object>, IDisposable
     {
         private readonly HttpServer Server;
-        private readonly ConcurrentDictionary<string, EngineIOClient> _Clients = new ConcurrentDictionary<string, EngineIOClient>();
+        private readonly ConcurrentDictionary<string, EngineIOSocket> _Clients = new ConcurrentDictionary<string, EngineIOSocket>();
 
-        public IDictionary<string, EngineIOClient> Clients { get { return new Dictionary<string, EngineIOClient>(_Clients); } }
+        public IDictionary<string, EngineIOSocket> Clients { get { return new Dictionary<string, EngineIOSocket>(_Clients); } }
         public int ClientsCount { get { return _Clients.Count; } }
 
         public EngineIOServerOption Option { get; private set; }
@@ -24,6 +25,8 @@ namespace EngineIOSharp.Server
         public EngineIOServer(EngineIOServerOption Option)
         {
             Server = new HttpServer(Option.Port, Option.Secure);
+            Server.OnGet += OnHttpRequest;
+            Server.OnPost += OnHttpRequest;
             
             if ((this.Option = Option).Secure)
             {
@@ -41,9 +44,9 @@ namespace EngineIOSharp.Server
 
         public EngineIOServer Stop()
         {
-            foreach (EngineIOClient Client in _Clients.Values)
+            foreach (EngineIOSocket Client in _Clients.Values)
             {
-                Client.Close();
+                Client.Close(true);
             }
 
             Server.Stop();
@@ -54,6 +57,42 @@ namespace EngineIOSharp.Server
         public void Dispose()
         {
             Stop();
+        }
+
+        private void Handshake(string TransportName, HttpListenerRequest Request, HttpListenerResponse Response)
+        {
+            ThreadPool.QueueUserWorkItem((_) =>
+            {
+                try
+                {
+                    string SID = EngineIOSocketID.Generate();
+                    EngineIOTransport Transport = null;
+
+                    if (TransportName.Equals(EngineIOPolling.Name))
+                    {
+                        Transport = new EngineIOPolling();
+                    }
+                    else if (TransportName.Equals(EngineIOWebSocket.Name))
+                    {
+
+                    }
+                    else
+                    {
+
+                    }
+
+                    if (Transport != null)
+                    {
+
+                    }
+                }
+                catch (Exception Exception)
+                {
+                    EngineIOLogger.Error(this, Exception);
+
+                    EngineIOHttpManager.SendErrorMessage(Request, Response, Exceptions.BAD_REQUEST);
+                }
+            });
         }
     }
 }

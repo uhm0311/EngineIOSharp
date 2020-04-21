@@ -7,7 +7,7 @@ namespace EngineIOSharp.Common
     {
         public static bool DoWrite = true;
 
-        public readonly static Action<LogData, string> WebSocket = (data, message) =>
+        public static Action<LogData, string> WebSocket = (data, message) =>
         {
             if (DoWrite)
             {
@@ -15,7 +15,7 @@ namespace EngineIOSharp.Common
             }
         };
 
-        public readonly static Action<object, Exception> Error = (sender, e) =>
+        public static Action<object, Exception> Error = (sender, e) =>
         {
             if (DoWrite)
             {

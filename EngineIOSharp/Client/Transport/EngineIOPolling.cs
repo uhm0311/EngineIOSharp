@@ -1,10 +1,10 @@
 ﻿using EngineIOSharp.Common.Enum;
+using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Threading;
@@ -13,15 +13,17 @@ namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOPolling : EngineIOTransport
     {
-        private readonly Dictionary<HttpMethod, Semaphore> Semaphores = new Dictionary<HttpMethod, Semaphore>();
+        public static readonly string Name = "polling";
+
+        private readonly Dictionary<EngineIOHttpMethod, Semaphore> Semaphores = new Dictionary<EngineIOHttpMethod, Semaphore>();
 
         private readonly CookieContainer Cookies = new CookieContainer();
         private bool Polling = false;
 
         public EngineIOPolling(EngineIOClientOption Option) : base(Option) 
         {
-            Semaphores.Add(HttpMethod.GET, new Semaphore(0, 1));
-            Semaphores.Add(HttpMethod.POST, new Semaphore(0, 1));
+            Semaphores.Add(EngineIOHttpMethod.GET, new Semaphore(0, 1));
+            Semaphores.Add(EngineIOHttpMethod.POST, new Semaphore(0, 1));
 
             foreach (Semaphore Semaphore in Semaphores.Values)
             {
@@ -97,30 +99,10 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            if (Packet.IsBinary || Packet.IsText)
-            {
-                Writable = false;
-
-                StringBuilder Builder = new StringBuilder();
-                Builder.Append((int)Packet.Type);
-                Builder.Append(Packet.IsText ? Packet.Data : Convert.ToBase64String(Packet.RawData));
-
-                int Length = Encoding.UTF8.GetByteCount(Builder.ToString());
-
-                if (Packet.IsText)
-                {
-                    Builder.Insert(0, string.Format("{0}:", Length));
-                }
-                else
-                {
-                    Builder.Insert(0, string.Format("{0}:b", Length + 1));
-                }
-
-                Request(HttpMethod.POST, Builder.ToString(), (Exception) => OnError("Post error", Exception));
-            }
+            Request(EngineIOHttpMethod.POST, Packet.Encode(true) as string, (Exception) => OnError("Post error", Exception));
         }
 
-        private void Request(HttpMethod Method = HttpMethod.GET, string Data = "", Action<Exception> ErrorCallback = null)
+        private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, string Data = "", Action<Exception> ErrorCallback = null)
         {
             Semaphores[Method].WaitOne();
 
@@ -177,7 +159,7 @@ namespace EngineIOSharp.Client.Transport
             });
         }
 
-        private HttpWebRequest CreateRequest(HttpMethod Method)
+        private HttpWebRequest CreateRequest(EngineIOHttpMethod Method)
         {
             StringBuilder URL = new StringBuilder();
             URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme, Option.Host, Option.Port, Option.Path)).Append('?');
@@ -237,7 +219,7 @@ namespace EngineIOSharp.Client.Transport
             return Request;
         }
 
-        private void HandleResponse(HttpMethod Method, HttpWebResponse Response)
+        private void HandleResponse(EngineIOHttpMethod Method, HttpWebResponse Response)
         {
             using (Response)
             {
@@ -248,7 +230,7 @@ namespace EngineIOSharp.Client.Transport
                         Cookies.Add(Response.Cookies);
                     }
 
-                    if (Method == HttpMethod.GET)
+                    if (Method == EngineIOHttpMethod.GET)
                     {
                         EngineIOPacket[] Packets = EngineIOPacket.Decode(Response);
 
@@ -288,7 +270,7 @@ namespace EngineIOSharp.Client.Transport
                             }
                         }
                     }
-                    else if (Method == HttpMethod.POST)
+                    else if (Method == EngineIOHttpMethod.POST)
                     {
                         Writable = true;
                         Emit(Event.DRAIN);
@@ -296,11 +278,5 @@ namespace EngineIOSharp.Client.Transport
                 }
             }
         }
-
-        private enum HttpMethod
-        {
-            GET,
-            POST
-        };
     }
 }
