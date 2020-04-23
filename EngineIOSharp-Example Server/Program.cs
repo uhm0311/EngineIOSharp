@@ -38,36 +38,6 @@ namespace EngineIOSharp.Example.Server
                     server.Broadcast(line);
                 }
             }
-            /*using (EngineIOServer server = new EngineIOServer(1009))
-            {
-                Console.WriteLine("Listening on " + server.Port);
-
-                server.On(EngineIOServerEvent.CONNECTION, (client) =>
-                {
-                    Console.WriteLine("Client connected!");
-
-                    client.On(EngineIOClientEvent.MESSAGE, (message) =>
-                    {
-                        Console.WriteLine("Client : " + message.Data);
-                        client.Send(message.Data);
-                    });
-
-                    client.On(EngineIOClientEvent.CLOSE, () =>
-                    {
-                        Console.WriteLine("Client disconnected!");
-                    });
-                });
-
-                server.Start();
-
-                Console.WriteLine("Input /exit to exit program.");
-                string line;
-
-                while (!(line = Console.ReadLine())?.Trim()?.ToLower()?.Equals("/exit") ?? false)
-                {
-                    server.Broadcast(line);
-                }
-            }*/
         }
     }
 }
