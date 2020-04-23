@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
@@ -12,8 +13,6 @@ namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOWebSocket : EngineIOTransport
     {
-        public static readonly string Name = "websocket";
-
         private readonly Semaphore Semaphore;
         private readonly WebSocket WebSocket;
 
@@ -142,7 +141,7 @@ namespace EngineIOSharp.Client.Transport
                     Emit(Event.DRAIN);
                 }
 
-                object EncodedPacket = Packet.Encode(Option.ForceBase64);
+                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64);
 
                 if (EncodedPacket is string)
                 {

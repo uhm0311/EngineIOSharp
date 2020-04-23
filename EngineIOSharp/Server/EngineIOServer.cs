@@ -1,5 +1,6 @@
 ﻿using EmitterSharp;
 using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Static;
 using EngineIOSharp.Server.Client;
 using EngineIOSharp.Server.Client.Transport;
@@ -59,11 +60,11 @@ namespace EngineIOSharp.Server
             Stop();
         }
 
-        private EngineIOException Verify(NameValueCollection QueryString, NameValueCollection Headers, string ExpectedTransportName)
+        private EngineIOException Verify(NameValueCollection QueryString, NameValueCollection Headers, EngineIOTransportType ExpectedTransportType)
         {
             EngineIOException Exception = Exceptions.UNKNOWN_TRANSPORT;
 
-            if (EngineIOHttpManager.GetTransport(QueryString).Equals(ExpectedTransportName))
+            if (EngineIOHttpManager.GetTransport(QueryString).Equals(ExpectedTransportType.ToString()))
             {
                 bool IsPolling = EngineIOHttpManager.IsPolling(QueryString) && Option.Polling;
                 bool IsWebSocket = EngineIOHttpManager.IsWebSocket(QueryString) && Option.WebSocket;

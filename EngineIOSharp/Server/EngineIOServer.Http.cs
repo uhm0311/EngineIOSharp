@@ -18,7 +18,7 @@ namespace EngineIOSharp.Server
 
             try
             {
-                if ((Return = Verify(Request.QueryString, Request.Headers, EngineIOPolling.Name)) == null)
+                if ((Return = Verify(Request.QueryString, Request.Headers, EngineIOTransportType.polling)) == null)
                 {
                     string SID = EngineIOHttpManager.GetSID(Request.QueryString);
                     bool Contains = _Clients.ContainsKey(SID);
@@ -94,7 +94,7 @@ namespace EngineIOSharp.Server
 
             try
             {
-                if (TransportName.Equals(EngineIOPolling.Name))
+                if (EngineIOHttpManager.IsPolling(TransportName))
                 {
                     EngineIOTransport Transport = new EngineIOPolling(Request);
                     Transport.OnRequest(Request, Response);

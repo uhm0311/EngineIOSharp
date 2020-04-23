@@ -7,7 +7,7 @@ namespace EngineIOSharp.Example.Server
     {
         static void Main(string[] args)
         {
-            using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009, PingInterval: int.MaxValue / 2, PingTimeout: int.MaxValue / 2)))
+            using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009)))
             {
                 Console.WriteLine("Listening on " + server.Option.Port);
 
@@ -24,7 +24,7 @@ namespace EngineIOSharp.Example.Server
                             socket.Send(packet.Data);
                         }
                         else
-                        {   
+                        {
                             socket.Send(packet.RawData);
                         }
                     });
@@ -47,6 +47,9 @@ namespace EngineIOSharp.Example.Server
                     server.Broadcast(line);
                 }
             }
+
+            Console.WriteLine("Press any key to continue...");
+            Console.Read();
         }
     }
 }

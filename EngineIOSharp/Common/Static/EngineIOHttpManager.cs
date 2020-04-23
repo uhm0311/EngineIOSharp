@@ -1,6 +1,5 @@
 ﻿using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Server;
-using EngineIOSharp.Server.Client.Transport;
 using Newtonsoft.Json.Linq;
 using System.Collections.Specialized;
 using System.Text;
@@ -48,14 +47,29 @@ namespace EngineIOSharp.Common.Static
             return true;
         }
 
+        private static EngineIOTransportType GetTransportType(string TransportName)
+        {
+            return (EngineIOTransportType)System.Enum.Parse(typeof(EngineIOTransportType), TransportName?.Trim()?.ToLower() ?? string.Empty);
+        }
+
+        public static bool IsPolling(string TransportName)
+        {
+            return GetTransportType(TransportName) == EngineIOTransportType.polling;
+        }
+
+        public static bool IsWebSocket(string TransportName)
+        {
+            return GetTransportType(TransportName) == EngineIOTransportType.websocket;
+        }
+
         public static bool IsPolling(NameValueCollection QueryString)
         {
-            return GetTransport(QueryString).Equals(EngineIOPolling.Name);
+            return IsPolling(GetTransport(QueryString));
         }
 
         public static bool IsWebSocket(NameValueCollection QueryString)
         {
-            return GetTransport(QueryString).Equals(EngineIOWebSocket.Name);
+            return IsWebSocket(GetTransport(QueryString));
         }
 
         public static string GetTransport(NameValueCollection QueryString)

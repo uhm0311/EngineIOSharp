@@ -1,4 +1,4 @@
-﻿using EngineIOSharp.Server.Client.Transport;
+﻿using EngineIOSharp.Common.Enum.Internal;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
@@ -19,7 +19,7 @@ namespace EngineIOSharp.Common.Packet
 
             if (Upgrade)
             {
-                Upgrades.Add(EngineIOWebSocket.Name);
+                Upgrades.Add(EngineIOTransportType.websocket.ToString());
             }
 
             return CreatePacket(EngineIOPacketType.OPEN, new JObject()

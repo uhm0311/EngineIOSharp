@@ -1,4 +1,6 @@
-﻿using System;
+﻿using EngineIOSharp.Client.Transport;
+using EngineIOSharp.Common.Enum.Internal;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -42,7 +44,7 @@ namespace EngineIOSharp.Common.Packet
             return Builder.ToString();
         }
 
-        internal object Encode(bool ForceBase64, bool Http = false, bool ForceBinary = false)
+        internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false)
         {
             if (ForceBase64 && ForceBinary)
             {
@@ -53,7 +55,7 @@ namespace EngineIOSharp.Common.Packet
             {
                 if (IsText || IsBinary)
                 {
-                    if (Http)
+                    if (TransportType == EngineIOTransportType.polling)
                     {
                         if (!ForceBinary && (IsText || ForceBase64))
                         {
@@ -80,7 +82,7 @@ namespace EngineIOSharp.Common.Packet
 
                             if (IsText)
                             {
-                                Buffer.Add(Convert.ToByte(((byte)Type).ToString()[0]));
+                                Buffer.Add(Convert.ToByte((char)(Type + 48)));
                             }
                             else
                             {

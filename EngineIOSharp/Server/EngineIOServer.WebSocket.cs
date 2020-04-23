@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Static;
 using EngineIOSharp.Server.Client;
 using EngineIOSharp.Server.Client.Transport;
@@ -38,7 +39,7 @@ namespace EngineIOSharp.Server
 
             try
             {
-                if ((Return = Verify(Context.QueryString, Context.Headers, EngineIOWebSocket.Name)) == null)
+                if ((Return = Verify(Context.QueryString, Context.Headers, EngineIOTransportType.websocket)) == null)
                 {
                     string SID = EngineIOHttpManager.GetSID(Context.QueryString);
                     bool Contains = _Clients.ContainsKey(SID);
@@ -100,7 +101,7 @@ namespace EngineIOSharp.Server
 
             try
             {
-                if (TransportName.Equals(EngineIOWebSocket.Name))
+                if (EngineIOHttpManager.IsWebSocket(TransportName))
                 {
                     Handshake(Context.QueryString["sid"] ?? EngineIOSocketID.Generate(), new EngineIOWebSocket(Context));
                 }

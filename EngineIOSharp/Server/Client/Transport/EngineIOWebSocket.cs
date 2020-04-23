@@ -1,4 +1,5 @@
-﻿using EngineIOSharp.Common.Packet;
+﻿using EngineIOSharp.Common.Enum.Internal;
+using EngineIOSharp.Common.Packet;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,8 +11,6 @@ namespace EngineIOSharp.Server.Client.Transport
 {
     internal class EngineIOWebSocket : EngineIOTransport
     {
-        public static readonly string Name = "websocket";
-
         internal EngineIOWebSocket(WebSocketContext Context)
         {
             throw new NotImplementedException();

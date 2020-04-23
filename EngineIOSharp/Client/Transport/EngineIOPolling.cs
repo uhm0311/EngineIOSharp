@@ -13,8 +13,6 @@ namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOPolling : EngineIOTransport
     {
-        public static readonly string Name = "polling";
-
         private readonly Dictionary<EngineIOHttpMethod, Semaphore> Semaphores = new Dictionary<EngineIOHttpMethod, Semaphore>();
 
         private readonly CookieContainer Cookies = new CookieContainer();
@@ -99,7 +97,7 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            Request(EngineIOHttpMethod.POST, Packet.Encode(Option.ForceBase64, true), (Exception) => OnError("Post error", Exception));
+            Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64), (Exception) => OnError("Post error", Exception));
         }
 
         private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, object EncodedPacket = null, Action<Exception> ErrorCallback = null)

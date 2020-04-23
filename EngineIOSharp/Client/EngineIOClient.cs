@@ -3,6 +3,7 @@ using EngineIOSharp.Client.Transport;
 using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
+using EngineIOSharp.Common.Static;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
@@ -248,7 +249,7 @@ namespace EngineIOSharp.Client
             {
                 foreach (string Upgrade in Handshake.Upgrades)
                 {
-                    if (Upgrade.Trim().ToLower().Equals(EngineIOWebSocket.Name))
+                    if (EngineIOHttpManager.IsWebSocket(Upgrade))
                     {
                         Probe();
                         break;

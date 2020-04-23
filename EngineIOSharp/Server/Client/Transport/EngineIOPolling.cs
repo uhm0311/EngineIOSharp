@@ -11,8 +11,6 @@ namespace EngineIOSharp.Server.Client.Transport
 {
     internal class EngineIOPolling : EngineIOTransport
     {
-        public static readonly string Name = "polling";
-
         private HttpListenerRequest PollRequest;
         private HttpListenerResponse PollResponse;
 
@@ -45,7 +43,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
             if (Writable)
             {
-                Send(EngineIOPacket.CreateClosePacket());
+                Send(EngineIOPacket.CreateClosePacket().Encode(EngineIOTransportType.polling, ForceBase64));
                 OnClose();
             }
             else if (Discarded)
@@ -91,7 +89,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     foreach (EngineIOPacket Packet in Packets)
                     {
-                        EncodedPacktes.AddRange(Packet.Encode(false, true, true) as byte[]);
+                        EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
                     }
 
                     Send(EncodedPacktes.ToArray());
@@ -102,7 +100,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     foreach (EngineIOPacket Packet in Packets)
                     {
-                        EncodedPackets.Append(Packet.Encode(true, true));
+                        EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
                     }
 
                     Send(EncodedPackets.ToString());
@@ -242,7 +240,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     if (Writable && ShouldClose != null)
                     {
-                        Send(EngineIOPacket.CreateNoopPacket().Encode(ForceBase64, true), OnPollRequestClose);
+                        Send(EngineIOPacket.CreateNoopPacket().Encode(EngineIOTransportType.polling, ForceBase64), OnPollRequestClose);
                     }
                 }
                 else

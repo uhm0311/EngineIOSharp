@@ -29,7 +29,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
         internal void Close(Action Callback = null)
         {
-            if (ReadyState != EngineIOReadyState.CLOSING || ReadyState != EngineIOReadyState.CLOSED)
+            if (ReadyState != EngineIOReadyState.CLOSING && ReadyState != EngineIOReadyState.CLOSED)
             {
                 ReadyState = EngineIOReadyState.CLOSING;
                 CloseInternal(Callback);

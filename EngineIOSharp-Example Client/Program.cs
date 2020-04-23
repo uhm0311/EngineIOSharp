@@ -40,6 +40,9 @@ namespace EngineIOSharp.Example.Client
                     client.Send(Encoding.UTF8.GetBytes(line));
                 }
             }
+
+            Console.WriteLine("Press any key to continue...");
+            Console.Read();
         }
     }
 }
