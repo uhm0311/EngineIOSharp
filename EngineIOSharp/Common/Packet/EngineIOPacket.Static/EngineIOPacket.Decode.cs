@@ -67,9 +67,16 @@ namespace EngineIOSharp.Common.Packet
 
         internal static EngineIOPacket[] Decode(HttpWebResponse Response)
         {
-            if (Response != null && Response.StatusCode == HttpStatusCode.OK)
+            if (Response != null)
             {
-                return Decode(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
+                if (Response.StatusCode == HttpStatusCode.OK)
+                {
+                    return Decode(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
+                }
+                else
+                {
+                    return new EngineIOPacket[] { CreateErrorPacket() };
+                }
             }
 
             return new EngineIOPacket[0];
