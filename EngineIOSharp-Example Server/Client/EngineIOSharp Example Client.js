@@ -1,13 +1,12 @@
 var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', {
 	'timestampRequests': true,
-	'transports': ['websocket'],
+	'transports': ['polling'],
 	'forceBase64': true
 });
-socket.su
 
 socket.on('open', function () {
 	console.log('Connected!');
-	console.log(socket.id);
+	socket.send(Buffer.from([0, 1, 2, 3, 4, 5, 6]));
 
 	socket.on('message', function (message) {
 		console.log('Server : ' + message);
@@ -26,6 +25,8 @@ const readline = require('readline').createInterface({
 
 function onMessage (message) {
 	if (message != '/exit') {
+		socket.send(Buffer.from([0, 1, 2, 3, 4, 5, 6]));
+		
 		socket.send('Client says, ');
 		socket.send(message);
 		

@@ -18,7 +18,15 @@ namespace EngineIOSharp.Example.Server
                     socket.OnMessage((packet) =>
                     {
                         Console.WriteLine(packet.Data);
-                        socket.Send(packet.Data);
+
+                        if (packet.IsText)
+                        {
+                            socket.Send(packet.Data);
+                        }
+                        else
+                        {   
+                            socket.Send(packet.RawData);
+                        }
                     });
 
                     socket.OnClose(() =>

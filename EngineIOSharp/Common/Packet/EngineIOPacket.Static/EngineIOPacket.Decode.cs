@@ -44,7 +44,7 @@ namespace EngineIOSharp.Common.Packet
                 Queue<byte> BufferQueue = new Queue<byte>(RawData);
                 EngineIOPacket Packet = new EngineIOPacket()
                 {
-                    Type = (EngineIOPacketType)BufferQueue.Dequeue(),
+                    Type = (EngineIOPacketType)byte.Parse(Convert.ToChar(BufferQueue.Dequeue()).ToString()),
                     IsText = false,
                     IsBinary = true,
                 };
@@ -112,19 +112,19 @@ namespace EngineIOSharp.Common.Packet
 
                         if (Content.Contains(':'))
                         {
-                            string Buffer;
+                            StringBuilder Buffer = new StringBuilder();
                             int Size;
 
                             while (Content.Length > 0)
                             {
-                                Buffer = string.Empty;
+                                Buffer.Clear();
                                 Size = 0;
 
                                 for (int i = 0; i < Content.Length; i++)
                                 {
                                     if (Content[i] != ':')
                                     {
-                                        Buffer += Content[i];
+                                        Buffer.Append(Content[i]);
                                     }
                                     else
                                     {
@@ -132,28 +132,29 @@ namespace EngineIOSharp.Common.Packet
                                     }
                                 }
 
-                                Size = int.Parse(Buffer);
+                                Size = int.Parse(Buffer.ToString());
                                 Content = Content.Substring(Buffer.Length + 1);
-                                Buffer = string.Empty;
+                                Buffer.Clear();
 
                                 for (int i = 0; i < Size; i++)
                                 {
-                                    Buffer += Content[i];
+                                    Buffer.Append(Content[i]);
                                 }
 
                                 Content = Content.Substring(Buffer.Length);
+                                string Data = Buffer.ToString();
 
-                                if (Buffer.StartsWith("b"))
+                                if (Data.StartsWith("b"))
                                 {
-                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
-                                    Buffer = Buffer.Substring(2);
+                                    List<byte> RawBuffer = new List<byte>() { Convert.ToByte(Data[1]) };
+                                    Data = Data.Substring(2);
 
-                                    RawBuffer.AddRange(Convert.FromBase64String(Buffer));
+                                    RawBuffer.AddRange(Convert.FromBase64String(Data));
                                     Result.Add(Decode(RawBuffer.ToArray()));
                                 }
                                 else
                                 {
-                                    Result.Add(Decode(Buffer));
+                                    Result.Add(Decode(Data));
                                 }
                             }
                         }
