@@ -67,98 +67,100 @@ namespace EngineIOSharp.Common.Packet
 
         internal static EngineIOPacket[] Decode(HttpWebResponse Response)
         {
-            List<EngineIOPacket> Result = new List<EngineIOPacket>();
-
             if (Response != null && Response.StatusCode == HttpStatusCode.OK)
             {
-                Result.AddRange(Decode(Response.GetResponseStream()));
+                return Decode(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
             }
 
-            return Result.ToArray();
+            return new EngineIOPacket[0];
         }
 
         internal static EngineIOPacket[] Decode(HttpListenerRequest Request)
         {
-            List<EngineIOPacket> Result = new List<EngineIOPacket>();
-
             if (Request != null)
             {
-                Result.AddRange(Decode(Request.InputStream));
+                return Decode(Request.InputStream, Request.ContentType.Equals("application/octet-stream"));
             }
 
-            return Result.ToArray();
+            return new EngineIOPacket[0];
         }
 
-        private static EngineIOPacket[] Decode(Stream Stream)
+        private static EngineIOPacket[] Decode(Stream Stream, bool IsBinary)
         {
+            List<EngineIOPacket> Result = new List<EngineIOPacket>();
             string Temp = string.Empty;
 
             try
             {
-                List<EngineIOPacket> Result = new List<EngineIOPacket>();
-
-                using (StreamReader Reader = new StreamReader(Stream))
+                if (IsBinary)
                 {
-                    string Content = Reader.ReadToEnd();
-                    Temp = Content;
-
-                    if (Content.Contains(':'))
+                    throw new NotImplementedException();
+                }
+                else
+                {
+                    using (StreamReader Reader = new StreamReader(Stream))
                     {
-                        string Buffer;
-                        int Size;
+                        string Content = Reader.ReadToEnd();
+                        Temp = Content;
 
-                        while (Content.Length > 0)
+                        if (Content.Contains(':'))
                         {
-                            Buffer = string.Empty;
-                            Size = 0;
+                            string Buffer;
+                            int Size;
 
-                            for (int i = 0; i < Content.Length; i++)
+                            while (Content.Length > 0)
                             {
-                                if (Content[i] != ':')
+                                Buffer = string.Empty;
+                                Size = 0;
+
+                                for (int i = 0; i < Content.Length; i++)
+                                {
+                                    if (Content[i] != ':')
+                                    {
+                                        Buffer += Content[i];
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                Size = int.Parse(Buffer);
+                                Content = Content.Substring(Buffer.Length + 1);
+                                Buffer = string.Empty;
+
+                                for (int i = 0; i < Size; i++)
                                 {
                                     Buffer += Content[i];
                                 }
+
+                                Content = Content.Substring(Buffer.Length);
+
+                                if (Buffer.StartsWith("b"))
+                                {
+                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
+                                    Buffer = Buffer.Substring(2);
+
+                                    RawBuffer.AddRange(Convert.FromBase64String(Buffer));
+                                    Result.Add(Decode(RawBuffer.ToArray()));
+                                }
                                 else
                                 {
-                                    break;
+                                    Result.Add(Decode(Buffer));
                                 }
-                            }
-
-                            Size = int.Parse(Buffer);
-                            Content = Content.Substring(Buffer.Length + 1);
-                            Buffer = string.Empty;
-
-                            for (int i = 0; i < Size; i++)
-                            {
-                                Buffer += Content[i];
-                            }
-
-                            Content = Content.Substring(Buffer.Length);
-
-                            if (Buffer.StartsWith("b"))
-                            {
-                                List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
-                                Buffer = Buffer.Substring(2);
-
-                                RawBuffer.AddRange(Convert.FromBase64String(Buffer));
-                                Result.Add(Decode(RawBuffer.ToArray()));
-                            }
-                            else
-                            {
-                                Result.Add(Decode(Buffer));
                             }
                         }
                     }
                 }
-
-                return Result.ToArray();
             }
             catch (Exception Exception)
             {
                 EngineIOLogger.Error("Packet decoding failed. " + Temp, Exception);
 
-                return new EngineIOPacket[] { CreateErrorPacket(Exception) };
+                Result.Add(CreateErrorPacket(Exception));
             }
+
+            return Result.ToArray();
         }
 
         internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
