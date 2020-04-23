@@ -38,7 +38,7 @@ namespace EngineIOSharp.Server
 
             try
             {
-                if ((Return = Verify(Context.QueryString, Context.Headers, EngineIOPolling.Name)) == null)
+                if ((Return = Verify(Context.QueryString, Context.Headers, EngineIOWebSocket.Name)) == null)
                 {
                     string SID = EngineIOHttpManager.GetSID(Context.QueryString);
                     bool Contains = _Clients.ContainsKey(SID);

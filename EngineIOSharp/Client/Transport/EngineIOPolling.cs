@@ -99,10 +99,10 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            Request(EngineIOHttpMethod.POST, Packet.Encode(true) as string, (Exception) => OnError("Post error", Exception));
+            Request(EngineIOHttpMethod.POST, Packet.Encode(Option.ForceBase64, true), (Exception) => OnError("Post error", Exception));
         }
 
-        private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, string Data = "", Action<Exception> ErrorCallback = null)
+        private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, object EncodedPacket = null, Action<Exception> ErrorCallback = null)
         {
             Semaphores[Method].WaitOne();
 
@@ -112,11 +112,25 @@ namespace EngineIOSharp.Client.Transport
                 {
                     HttpWebRequest Request = CreateRequest(Method);
 
-                    if (!string.IsNullOrWhiteSpace(Data))
+                    if (EncodedPacket != null)
                     {
-                        using (StreamWriter Writer = new StreamWriter(Request.GetRequestStream()))
+                        using (Stream Stream = Request.GetRequestStream())
                         {
-                            Writer.Write(Data);
+                            byte[] RawData = null;
+
+                            if (EncodedPacket is string)
+                            {
+                                RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                            }
+                            else if (EncodedPacket is byte[])
+                            {
+                                RawData = EncodedPacket as byte[];
+                            }
+
+                            if (RawData != null)
+                            {
+                                Stream.Write(RawData, 0, RawData.Length);
+                            }
                         }
                     }
 

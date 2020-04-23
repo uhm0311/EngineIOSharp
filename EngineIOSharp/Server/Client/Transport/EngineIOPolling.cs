@@ -3,6 +3,7 @@ using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
+using System.Collections.Generic;
 using System.Text;
 using WebSocketSharp.Net;
 
@@ -22,10 +23,12 @@ namespace EngineIOSharp.Server.Client.Transport
         private EngineIOTimeout CloseTimer;
 
         private readonly string Origin;
+        private readonly bool ForceBase64;
 
         public EngineIOPolling(HttpListenerRequest Request)
         {
             Origin = Request.Headers["Origin"]?.Trim() ?? string.Empty;
+            ForceBase64 = int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
         }
 
         protected override void CloseInternal(Action Callback)
@@ -69,37 +72,77 @@ namespace EngineIOSharp.Server.Client.Transport
                     ShouldClose = null;
                 }
 
-                StringBuilder EncodedPackets = new StringBuilder();
+                bool HasBinary = false;
 
-                foreach (EngineIOPacket Packet in Packets)
+                if (!ForceBase64)
                 {
-                    EncodedPackets.Append(Packet.Encode(true));
+                    foreach (EngineIOPacket Packet in Packets)
+                    {
+                        if (HasBinary = Packet.IsBinary)
+                        {
+                            break;
+                        }
+                    }
                 }
 
-                Send(EncodedPackets.ToString());
+                if (HasBinary)
+                {
+                    List<byte> EncodedPacktes = new List<byte>();
+
+                    foreach (EngineIOPacket Packet in Packets)
+                    {
+                        EncodedPacktes.AddRange(Packet.Encode(false, true, true) as byte[]);
+                    }
+
+                    Send(EncodedPacktes.ToArray());
+                }
+                else
+                {
+                    StringBuilder EncodedPackets = new StringBuilder();
+
+                    foreach (EngineIOPacket Packet in Packets)
+                    {
+                        EncodedPackets.Append(Packet.Encode(true, true));
+                    }
+
+                    Send(EncodedPackets.ToString());
+                }
             }
 
             return this;
         }
 
-        private void Send(string EncodedPacket, Action<Exception> OnException = null)
+        private void Send(object EncodedPacket, Action<Exception> OnException = null)
         {
             using (PollResponse)
             {
                 try
                 {
-                    byte[] RawData = Encoding.UTF8.GetBytes(EncodedPacket);
-                    PollResponse.Headers = SetHeaders(PollResponse.Headers);
+                    byte[] RawData = null;
 
-                    using (PollResponse.OutputStream)
+                    if (EncodedPacket is string)
                     {
-                        PollResponse.KeepAlive = false;
+                        RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                    }
+                    else if (EncodedPacket is byte[])
+                    {
+                        RawData = EncodedPacket as byte[];
+                    }
 
-                        PollResponse.ContentType = "text/plain; charset=UTF-8";
-                        PollResponse.ContentEncoding = Encoding.UTF8;
-                        PollResponse.ContentLength64 = RawData.Length;
+                    if ((RawData?.Length ?? 0) > 0)
+                    {
+                        PollResponse.Headers = SetHeaders(PollResponse.Headers);
 
-                        PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                        using (PollResponse.OutputStream)
+                        {
+                            PollResponse.KeepAlive = false;
+
+                            PollResponse.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
+                            PollResponse.ContentEncoding = EncodedPacket is string ? Encoding.UTF8 : null;
+                            PollResponse.ContentLength64 = RawData.Length;
+
+                            PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                        }
                     }
                 }
                 catch (Exception Exception)
@@ -199,7 +242,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     if (Writable && ShouldClose != null)
                     {
-                        Send(EngineIOPacket.CreateNoopPacket().Encode(true) as string, OnPollRequestClose);
+                        Send(EngineIOPacket.CreateNoopPacket().Encode(ForceBase64, true), OnPollRequestClose);
                     }
                 }
                 else

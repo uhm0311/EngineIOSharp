@@ -15,7 +15,6 @@ namespace EngineIOSharp.Client.Transport
         public static readonly string Name = "websocket";
 
         private readonly Semaphore Semaphore;
-
         private readonly WebSocket WebSocket;
 
         public EngineIOWebSocket(EngineIOClientOption Option) : base(Option)
@@ -143,13 +142,15 @@ namespace EngineIOSharp.Client.Transport
                     Emit(Event.DRAIN);
                 }
 
-                if (Packet.IsText)
+                object EncodedPacket = Packet.Encode(Option.ForceBase64);
+
+                if (EncodedPacket is string)
                 {
-                    WebSocket.SendAsync(Packet.Encode() as string, Callback);
+                    WebSocket.SendAsync(EncodedPacket as string, Callback);
                 }
-                else
+                else if (EncodedPacket is byte[])
                 {
-                    WebSocket.SendAsync(Packet.Encode() as byte[], Callback);
+                    WebSocket.SendAsync(EncodedPacket as byte[], Callback);
                 }
             }
         }

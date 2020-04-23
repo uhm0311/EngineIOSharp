@@ -19,6 +19,7 @@ namespace EngineIOSharp.Client
         
         public bool Upgrade { get; private set; }
         public bool RemeberUpgrade { get; private set; }
+        public bool ForceBase64 { get; private set; }
 
         public bool WithCredentials { get; private set; }
         public bool? TimestampRequests { get; private set; }
@@ -46,6 +47,7 @@ namespace EngineIOSharp.Client
         /// <param name="Query">Parameters that will be passed for each request to the server.</param>
         /// <param name="Upgrade">Whether the client should try to upgrade the transport.</param>
         /// <param name="RemeberUpgrade">Whether the client should bypass normal upgrade process when previous websocket connection is succeeded.</param>
+        /// <param name="ForceBase64">Forces base 64 encoding for transport.</param>
         /// <param name="WithCredentials">Whether to include credentials such as cookies, authorization headers, TLS client certificates, etc. with polling requests.</param>
         /// <param name="TimestampRequests">Whether to add the timestamp with each transport request. Polling requests are always stamped.</param>
         /// <param name="TimestampParam">Timestamp parameter</param>
@@ -57,7 +59,7 @@ namespace EngineIOSharp.Client
         /// <param name="ClientCertificates">The collection of security certificates that are associated with each request.</param>
         /// <param name="ClientCertificateSelectionCallback">Callback used to select the certificate to supply to the server.</param>
         /// <param name="ServerCertificateValidationCallback">Callback method to validate the server certificate.</param>
-        public EngineIOClientOption(EngineIOScheme Scheme, string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool WithCredentials = true, bool? TimestampRequests = null, string TimestampParam = "t", bool Polling = true, int PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
+        public EngineIOClientOption(EngineIOScheme Scheme, string Host, ushort Port, ushort PolicyPort = 843, string Path = "/engine.io", IDictionary<string, string> Query = null, bool Upgrade = true, bool RemeberUpgrade = false, bool ForceBase64 = false, bool WithCredentials = true, bool? TimestampRequests = null, string TimestampParam = "t", bool Polling = true, int PollingTimeout = 0, bool WebSocket = true, string[] WebSocketSubprotocols = null, IDictionary<string, string> ExtraHeaders = null, X509CertificateCollection ClientCertificates = null, LocalCertificateSelectionCallback ClientCertificateSelectionCallback = null, RemoteCertificateValidationCallback ServerCertificateValidationCallback = null)
         {
             this.Scheme = Scheme;
             this.Host = Host;
@@ -69,6 +71,7 @@ namespace EngineIOSharp.Client
 
             this.Upgrade = Upgrade;
             this.RemeberUpgrade = RemeberUpgrade;
+            this.ForceBase64 = ForceBase64;
 
             this.WithCredentials = WithCredentials;
             this.TimestampRequests = TimestampRequests;

@@ -14,7 +14,6 @@ namespace EngineIOSharp.Example.Server
                 server.OnConnection((socket) =>
                 {
                     Console.WriteLine("Client connected!");
-                    socket.Send(new byte[] { 0, 1, 2, 3, 4, 5, 6 });
 
                     socket.OnMessage((packet) =>
                     {
@@ -26,6 +25,8 @@ namespace EngineIOSharp.Example.Server
                     {
                         Console.WriteLine("Client disconnected!");
                     });
+
+                    socket.Send(new byte[] { 0, 1, 2, 3, 4, 5, 6 });
                 });
 
                 server.Start();

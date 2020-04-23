@@ -42,47 +42,71 @@ namespace EngineIOSharp.Common.Packet
             return Builder.ToString();
         }
 
-        internal object Encode(bool Http = false)
+        internal object Encode(bool ForceBase64, bool Http = false, bool ForceBinary = false)
         {
+            if (ForceBase64 && ForceBinary)
+            {
+                throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
+            }
+
             try
             {
                 if (IsText || IsBinary)
                 {
                     if (Http)
                     {
-                        StringBuilder Builder = new StringBuilder();
-                        Builder.Append((int)Type);
-                        Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
-
-                        int Length = Encoding.UTF8.GetByteCount(Builder.ToString());
-
-                        if (IsText)
-                        {
-                            Builder.Insert(0, string.Format("{0}:", Length));
-                        }
-                        else
-                        {
-                            Builder.Insert(0, string.Format("{0}:b", Length + 1));
-                        }
-
-                        return Builder.ToString();
-                    }
-                    else
-                    {
-                        if (IsText)
+                        if (!ForceBinary && (IsText || ForceBase64))
                         {
                             StringBuilder Builder = new StringBuilder();
                             Builder.Append((int)Type);
-                            Builder.Append(Data);
+                            Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
+
+                            int Length = Encoding.UTF8.GetByteCount(Builder.ToString()) + (IsText ? 0 : 1);
+                            Builder.Insert(0, string.Format("{0}:" + (IsText ? "" : "b"), Length));
 
                             return Builder.ToString();
                         }
-                        else if (IsBinary)
+                        else
                         {
-                            List<byte> RawData = new List<byte>() { (byte)Type };
-                            RawData.AddRange(this.RawData);
+                            List<byte> Buffer = new List<byte>() { (byte)(IsText ? 0 : 1) };
+                            byte[] RawData = IsText ? Encoding.UTF8.GetBytes(Data) : this.RawData;
 
-                            return RawData.ToArray();
+                            foreach (char Character in (RawData.Length + 1).ToString())
+                            {
+                                Buffer.Add(byte.Parse(Character.ToString()));
+                            }
+
+                            Buffer.Add(0xff);
+
+                            if (IsText)
+                            {
+                                Buffer.Add(Convert.ToByte(((byte)Type).ToString()[0]));
+                            }
+                            else
+                            {
+                                Buffer.Add((byte)Type);
+                            }
+
+                            Buffer.AddRange(RawData);
+                            return Buffer.ToArray();
+                        }
+                    }
+                    else
+                    {
+                        if (!ForceBinary&& (IsText || ForceBase64))
+                        {
+                            StringBuilder Builder = new StringBuilder();
+                            Builder.Append((int)Type);
+                            Builder.Append(IsText ? Data : "b" + Convert.ToBase64String(RawData));
+
+                            return Builder.ToString();
+                        }
+                        else
+                        {
+                            List<byte> Buffer = new List<byte>() { (byte)Type };
+                            Buffer.AddRange(RawData);
+
+                            return Buffer.ToArray();
                         }
                     }
                 }
