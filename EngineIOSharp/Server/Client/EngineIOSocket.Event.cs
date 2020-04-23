@@ -1,13 +1,29 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using EngineIOSharp.Common.Packet;
+using System;
 
 namespace EngineIOSharp.Server.Client
 {
     partial class EngineIOSocket
     {
+        public EngineIOSocket OnClose(Action Callback)
+        {
+            return On(Event.CLOSE, Callback);
+        }
+
+        public EngineIOSocket OnClose(Action<string, Exception> Callback)
+        {
+            return On(Event.CLOSE, (Arguments) =>
+            {
+                object[] Temp = Arguments as object[];
+                Callback(Temp[0] as string, Temp[1] as Exception);
+            });
+        }
+
+        public EngineIOSocket OnMessage(Action<EngineIOPacket> Callback)
+        {
+            return On(Event.MESSAGE, (Packet) => Callback(Packet as EngineIOPacket));
+        }
+
         public static class Event
         {
             public static readonly string OPEN = "open";

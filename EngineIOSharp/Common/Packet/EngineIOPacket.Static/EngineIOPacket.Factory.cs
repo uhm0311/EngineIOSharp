@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Server.Client.Transport;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Text;
@@ -27,7 +28,7 @@ namespace EngineIOSharp.Common.Packet
                 ["pingInterval"] = PingInterval,
                 ["pingTimeout"] = PingTimeout,
                 ["upgrades"] = Upgrades
-            }.ToString());
+            }.ToString(Formatting.None));
         }
 
         internal static EngineIOPacket CreateClosePacket()

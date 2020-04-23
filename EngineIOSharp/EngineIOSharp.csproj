@@ -1,7 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">net45;net40;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">net45;net40;netstandard2.0;netcoreapp2.0;netcoreapp3.0</TargetFrameworks>
     <TargetFrameworks Condition="'$(LibraryFrameworks)'!=''">$(LibraryFrameworks)</TargetFrameworks>
     <RootNamespace>EngineIOSharp</RootNamespace>
       <AssemblyName>EngineIOSharp</AssemblyName>
@@ -22,17 +22,15 @@
     <MinClientVersion>2.12</MinClientVersion>
     <PackageVersion>1.0.0</PackageVersion>
     <PackageReleaseNotes>First release.</PackageReleaseNotes>
+    <PackageOutputPath>../nuget</PackageOutputPath>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
   </PropertyGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net45' OR '$(TargetFramework)'=='net40'">
-    <PackageReference Include="websocket-sharp-customheaders" Version="1.0.2.31869" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
-    <PackageReference Include="WebSocketSharp.CustomHeaders.Standard" Version="1.0.2" />
-  </ItemGroup>
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
     <PackageReference Include="EmitterSharp" Version="1.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="SimpleThreadMonitor" Version="1.0.2" />
+    <PackageReference Include="WebSocketSharp.CustomHeaders.CustomHttpServer" Version="1.0.2.1" />
   </ItemGroup>
 </Project>

@@ -11,76 +11,65 @@ namespace EngineIOSharp.Server
 {
     partial class EngineIOServer
     {
-        private void Verify(HttpListenerRequest Request, bool Upgrade, Action<EngineIOException> Callback)
+        private void Verify(HttpListenerRequest Request, Action<EngineIOException> Callback)
         {
             EngineIOException Return = null;
-            bool AllowRequest = Option.AllowRequest != null;
+            bool AllowHttpRequest = false;
 
             try
             {
-                bool IsPolling = EngineIOHttpManager.IsPolling(Request) && Option.Polling;
-                bool IsWebSocket = EngineIOHttpManager.IsWebSocket(Request) && Option.WebSocket;
-
-                if (IsPolling || IsWebSocket)
+                if ((Return = Verify(Request.QueryString, Request.Headers, EngineIOPolling.Name)) == null)
                 {
-                    if (EngineIOHttpManager.IsValidHeader(Request.Headers["Origin"]?.Trim() ?? string.Empty))
+                    string SID = EngineIOHttpManager.GetSID(Request.QueryString);
+                    bool Contains = _Clients.ContainsKey(SID);
+
+                    if (string.IsNullOrEmpty(SID) || Contains)
                     {
-                        string SID = EngineIOHttpManager.GetSID(Request.QueryString);
-                        bool Contains = _Clients.ContainsKey(SID);
-
-                        if (string.IsNullOrEmpty(SID) || Contains)
+                        if (Contains && !(_Clients[SID].Transport is EngineIOPolling))
                         {
-                            if (Contains)
+                            Return = Exceptions.BAD_REQUEST;
+                        }
+                        else if (EngineIOHttpManager.ParseMethod(Request.HttpMethod) == EngineIOHttpMethod.GET)
+                        {
+                            if (Option.AllowHttpRequest != null)
                             {
-                                EngineIOTransport Transport = _Clients[SID].Transport;
-
-                                if (!Upgrade && !(Transport is EngineIOPolling && IsPolling) && !(Transport is EngineIOWebSocket && IsWebSocket))
-                                {
-                                    Return = Exceptions.BAD_REQUEST;
-                                }
-                            }
-                            else if (EngineIOHttpManager.ParseMethod(Request.HttpMethod) == EngineIOHttpMethod.GET)
-                            {
-                                Option.AllowRequest?.Invoke(Request, Callback);
-                            }
-                            else
-                            {
-                                Return = Exceptions.BAD_HANDSHAKE_METHOD;
+                                AllowHttpRequest = true;
+                                Option.AllowHttpRequest(Request, Callback);
                             }
                         }
-                        else if (!Contains)
+                        else if (string.IsNullOrEmpty(SID))
                         {
-                            Return = Exceptions.UNKNOWN_SID;
+                            Return = Exceptions.BAD_HANDSHAKE_METHOD;
                         }
                     }
                     else
                     {
-                        Return = Exceptions.BAD_REQUEST;
+                        Return = Exceptions.UNKNOWN_SID;
                     }
-                }
-                else
-                {
-                    Return = Exceptions.UNKNOWN_TRANSPORT;
                 }
             }
             catch (Exception Exception)
             {
                 EngineIOLogger.Error(this, Return = new EngineIOException("Unknown exception", Exception));
             }
-
-            if (!AllowRequest)
+            finally
             {
-                Callback(Return);
+                if (!AllowHttpRequest)
+                {
+                    Callback(Return);
+                }
             }
         }
 
         private void OnHttpRequest(object sender, HttpRequestEventArgs e)
         {
-            Verify(e.Request, false, (Exception) =>
+            Verify(e.Request, (Exception) =>
             {
                 if (Exception == null)
                 {
-                    if (_Clients.TryGetValue(EngineIOHttpManager.GetSID(e.Request.QueryString), out EngineIOSocket Client))
+                    string SID = EngineIOHttpManager.GetSID(e.Request.QueryString);
+
+                    if (_Clients.TryGetValue(SID, out EngineIOSocket Client))
                     {
                         Client.Transport.OnRequest(e.Request, e.Response);
                     }
@@ -96,8 +85,42 @@ namespace EngineIOSharp.Server
             });
         }
 
+        private void Handshake(string TransportName, HttpListenerRequest Request, HttpListenerResponse Response)
+        {
+            void OnError()
+            {
+                EngineIOHttpManager.SendErrorMessage(Request, Response, Exceptions.BAD_REQUEST);
+            }
+
+            try
+            {
+                if (TransportName.Equals(EngineIOPolling.Name))
+                {
+                    EngineIOTransport Transport = new EngineIOPolling(Request);
+                    Transport.OnRequest(Request, Response);
+
+                    Handshake(EngineIOSocketID.Generate(), Transport);
+                }
+                else
+                {
+                    OnError();
+                }
+            }
+            catch (Exception Exception)
+            {
+                EngineIOLogger.Error(this, Exception);
+
+                OnError();
+            }
+        }
+
         internal static class Exceptions
         {
+            public static readonly EngineIOException UNKNOWN_TRANSPORT = new EngineIOException("Unknown transport");
+            public static readonly EngineIOException BAD_REQUEST = new EngineIOException("Bad request");
+            public static readonly EngineIOException UNKNOWN_SID = new EngineIOException("Unknown sid");
+            public static readonly EngineIOException BAD_HANDSHAKE_METHOD = new EngineIOException("Bad handshake method");
+
             private static readonly EngineIOException[] VALUES = new EngineIOException[]
             {
                 UNKNOWN_TRANSPORT,
@@ -105,11 +128,6 @@ namespace EngineIOSharp.Server
                 UNKNOWN_SID,
                 BAD_HANDSHAKE_METHOD,
             };
-
-            public static readonly EngineIOException UNKNOWN_TRANSPORT = new EngineIOException("Unknown transport");
-            public static readonly EngineIOException BAD_REQUEST = new EngineIOException("Bad request");
-            public static readonly EngineIOException UNKNOWN_SID = new EngineIOException("Unknown sid");
-            public static readonly EngineIOException BAD_HANDSHAKE_METHOD = new EngineIOException("Bad handshake method");
 
             public static bool Contains(Exception Exception)
             {

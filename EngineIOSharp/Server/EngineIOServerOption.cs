@@ -1,10 +1,10 @@
 ﻿using EngineIOSharp.Common;
-using EngineIOSharp.Common.Packet;
 using System;
 using System.Collections.Generic;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
 using WebSocketSharp.Net;
+using WebSocketSharp.Net.WebSockets;
 
 namespace EngineIOSharp.Server
 {
@@ -22,11 +22,12 @@ namespace EngineIOSharp.Server
         public bool WebSocket { get; private set; }
         public bool AllowUpgrade { get; private set; }
 
-        public bool UseCookie { get; private set; }
-        public string SIDName { get; private set; }
-        internal IDictionary<string, string> Cookie { get; private set; }
+        public bool SetCookie { get; private set; }
+        public string SIDCookieName { get; private set; }
+        internal IDictionary<string, string> Cookies { get; private set; }
 
-        public Action<HttpListenerRequest, Action<EngineIOException>> AllowRequest { get; private set; }
+        public Action<HttpListenerRequest, Action<EngineIOException>> AllowHttpRequest { get; private set; }
+        public Action<WebSocketContext, Action<EngineIOException>> AllowWebSocket { get; private set; }
         public object InitialData { get; private set; }
 
         public X509Certificate2 ServerCertificate { get; private set; }
@@ -44,14 +45,15 @@ namespace EngineIOSharp.Server
         /// <param name="Polling">Whether to accept polling transport.</param>
         /// <param name="WebSocket">Whether to accept websocket transport.</param>
         /// <param name="AllowUpgrade">Whether to allow transport upgrade.</param>
-        /// <param name="UseCookie">Whether to use cookie.</param>
-        /// <param name="SIDName">Name of sid cookie.</param>
-        /// <param name="Cookie">Configuration of the cookie that contains the client sid to send as part of handshake response headers. This cookie might be used for sticky-session.</param>
-        /// <param name="AllowRequest">A function that receives a given handshake or upgrade request as its first parameter, and can decide whether to continue or not.</param>
+        /// <param name="SetCookie">Whether to use cookie.</param>
+        /// <param name="SIDCookieName">Name of sid cookie.</param>
+        /// <param name="Cookies">Configuration of the cookie that contains the client sid to send as part of handshake response headers. This cookie might be used for sticky-session.</param>
+        /// <param name="AllowHttpRequest">A function that receives a given handshake or upgrade http request as its first parameter, and can decide whether to continue or not.</param>
+        /// <param name="AllowWebSocket">A function that receives a given handshake or upgrade websocket connection as its first parameter, and can decide whether to continue or not.</param>
         /// <param name="InitialData">An optional packet which will be concatenated to the handshake packet emitted by Engine.IO.</param>
         /// <param name="ServerCertificate">The certificate used to authenticate the server.</param>
         /// <param name="ClientCertificateValidationCallback">Callback used to validate the certificate supplied by the client.</param>
-        public EngineIOServerOption(ushort Port, string Path = "/engine.io", bool Secure = false, ulong PingTimeout = 5000, ulong PingInterval = 25000, ulong UpgradeTimeout = 10000, bool Polling = true, bool WebSocket = true, bool AllowUpgrade = true, bool UseCookie = true, string SIDName = "io", IDictionary<string, string> Cookie = null, Action<HttpListenerRequest, Action<EngineIOException>> AllowRequest = null, object InitialData = null, X509Certificate2 ServerCertificate = null, RemoteCertificateValidationCallback ClientCertificateValidationCallback = null)
+        public EngineIOServerOption(ushort Port, string Path = "/engine.io", bool Secure = false, ulong PingTimeout = 5000, ulong PingInterval = 25000, ulong UpgradeTimeout = 10000, bool Polling = true, bool WebSocket = true, bool AllowUpgrade = true, bool SetCookie = true, string SIDCookieName = "io", IDictionary<string, string> Cookies = null, Action<HttpListenerRequest, Action<EngineIOException>> AllowHttpRequest = null, Action<WebSocketContext, Action<EngineIOException>> AllowWebSocket = null, object InitialData = null, X509Certificate2 ServerCertificate = null, RemoteCertificateValidationCallback ClientCertificateValidationCallback = null)
         {
             this.Port = Port;
             this.Path = EngineIOOption.PolishPath(Path);
@@ -65,27 +67,28 @@ namespace EngineIOSharp.Server
             this.WebSocket = WebSocket;
             this.AllowUpgrade = AllowUpgrade;
 
-            this.UseCookie = UseCookie;
-            this.SIDName = SIDName;
-            this.Cookie = new Dictionary<string, string>();
+            this.SetCookie = SetCookie;
+            this.SIDCookieName = SIDCookieName;
+            this.Cookies = new Dictionary<string, string>();
 
-            this.AllowRequest = AllowRequest;
+            this.AllowHttpRequest = AllowHttpRequest;
+            this.AllowWebSocket = AllowWebSocket;
             this.InitialData = InitialData;
 
             this.ServerCertificate = ServerCertificate;
             this.ClientCertificateValidationCallback = ClientCertificateValidationCallback ?? EngineIOOption.DefaultCertificateValidationCallback;
 
-            if (UseCookie)
+            if (SetCookie)
             {
-                this.Cookie["Path"] = this.Path;
-                this.Cookie["HttpOnly"] = "";
-                this.Cookie["SameSite"] = "Lax";
+                this.Cookies["Path"] = this.Path;
+                this.Cookies["HttpOnly"] = "";
+                this.Cookies["SameSite"] = "Lax";
 
-                if (Cookie != null)
+                if (Cookies != null)
                 {
-                    foreach (string Key in Cookie.Keys)
+                    foreach (string Key in Cookies.Keys)
                     {
-                        this.Cookie[Key] = Cookie[Key] ?? this.Cookie[Key];
+                        this.Cookies[Key] = Cookies[Key] ?? this.Cookies[Key];
                     }
                 }
             }

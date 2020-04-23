@@ -6,8 +6,7 @@ using EngineIOSharp.Server.Client.Transport;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
-using WebSocketSharp.Net;
+using System.Collections.Specialized;
 using WebSocketSharp.Server;
 
 namespace EngineIOSharp.Server
@@ -24,7 +23,8 @@ namespace EngineIOSharp.Server
 
         public EngineIOServer(EngineIOServerOption Option)
         {
-            Server = new HttpServer(Option.Port, Option.Secure);
+            Server = new HttpServer(Option.Port, Option.Secure) { AutoClose = false };
+            Server.AddWebSocketService(Option.Path, CreateBehavior);
             Server.OnGet += OnHttpRequest;
             Server.OnPost += OnHttpRequest;
             
@@ -59,40 +59,60 @@ namespace EngineIOSharp.Server
             Stop();
         }
 
-        private void Handshake(string TransportName, HttpListenerRequest Request, HttpListenerResponse Response)
+        private EngineIOException Verify(NameValueCollection QueryString, NameValueCollection Headers, string ExpectedTransportName)
         {
-            ThreadPool.QueueUserWorkItem((_) =>
+            EngineIOException Exception = Exceptions.UNKNOWN_TRANSPORT;
+
+            if (EngineIOHttpManager.GetTransport(QueryString).Equals(ExpectedTransportName))
             {
-                try
+                bool IsPolling = EngineIOHttpManager.IsPolling(QueryString) && Option.Polling;
+                bool IsWebSocket = EngineIOHttpManager.IsWebSocket(QueryString) && Option.WebSocket;
+
+                if (IsPolling || IsWebSocket)
                 {
-                    string SID = EngineIOSocketID.Generate();
-                    EngineIOTransport Transport = null;
-
-                    if (TransportName.Equals(EngineIOPolling.Name))
+                    if (EngineIOHttpManager.IsValidHeader(Headers["Origin"]?.Trim() ?? string.Empty))
                     {
-                        Transport = new EngineIOPolling();
-                    }
-                    else if (TransportName.Equals(EngineIOWebSocket.Name))
-                    {
-
+                        Exception = null;
                     }
                     else
                     {
-
-                    }
-
-                    if (Transport != null)
-                    {
-
+                        Exception = Exceptions.BAD_REQUEST;
                     }
                 }
-                catch (Exception Exception)
+            }
+
+            return Exception;
+        }
+
+        private void Handshake(string SID, EngineIOTransport Transport)
+        {
+            if (Option.SetCookie)
+            {
+                Transport.On(EngineIOTransport.Event.HEADERS, (Headers) =>
                 {
-                    EngineIOLogger.Error(this, Exception);
+                    List<string> Cookies = new List<string>();
 
-                    EngineIOHttpManager.SendErrorMessage(Request, Response, Exceptions.BAD_REQUEST);
-                }
-            });
+                    foreach (string Key in Option.Cookies.Keys)
+                    {
+                        string Cookie = Key;
+                        string Value = Option.Cookies[Key];
+
+                        if (!string.IsNullOrWhiteSpace(Value))
+                        {
+                            Cookie += ('=' + Value);
+                        }
+
+                        Cookies.Add(Cookie);
+                    }
+
+                    (Headers as NameValueCollection)["Set-Cookie"] = string.Join("; ", Cookies);
+                });
+            }
+
+            EngineIOSocket Socket = new EngineIOSocket(SID, this, Transport);
+            _Clients.TryAdd(SID, Socket.Once(EngineIOSocket.Event.CLOSE, () => _Clients.TryRemove(SID, out _)));
+
+            Emit(Event.CONNECTION, Socket);
         }
     }
 }

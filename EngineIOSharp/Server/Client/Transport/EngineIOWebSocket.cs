@@ -4,12 +4,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WebSocketSharp.Net.WebSockets;
 
 namespace EngineIOSharp.Server.Client.Transport
 {
     internal class EngineIOWebSocket : EngineIOTransport
     {
         public static readonly string Name = "websocket";
+
+        internal EngineIOWebSocket(WebSocketContext Context)
+        {
+            throw new NotImplementedException();
+        }
 
         protected override void CloseInternal(Action Callback)
         {

@@ -2,9 +2,7 @@
 using EngineIOSharp.Server;
 using EngineIOSharp.Server.Client.Transport;
 using Newtonsoft.Json.Linq;
-using System;
 using System.Collections.Specialized;
-using System.IO;
 using System.Text;
 using WebSocketSharp.Net;
 
@@ -14,22 +12,22 @@ namespace EngineIOSharp.Common.Static
     {
         private readonly static int[] ValidHeader = new int[]
         {
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, // 0 - 15
-                0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16 - 31
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 32 - 47
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 48 - 63
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 64 - 79
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 80 - 95
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 96 - 111
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, // 112 - 127
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 128 ...
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
-                1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1  // ... 255
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, // 0 - 15
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // 16 - 31
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 32 - 47
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 48 - 63
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 64 - 79
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 80 - 95
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 96 - 111
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, // 112 - 127
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, // 128 ...
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+            1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1  // ... 255
         };
 
         public static bool IsValidHeader(string Header)
@@ -50,24 +48,29 @@ namespace EngineIOSharp.Common.Static
             return true;
         }
 
-        public static bool IsPolling(HttpListenerRequest Request)
+        public static bool IsPolling(NameValueCollection QueryString)
         {
-            return GetTransport(Request.QueryString).Equals(EngineIOPolling.Name);
+            return GetTransport(QueryString).Equals(EngineIOPolling.Name);
         }
 
-        public static bool IsWebSocket(HttpListenerRequest Request)
+        public static bool IsWebSocket(NameValueCollection QueryString)
         {
-            return GetTransport(Request.QueryString).Equals(EngineIOWebSocket.Name);
+            return GetTransport(QueryString).Equals(EngineIOWebSocket.Name);
         }
 
-        public static string GetTransport(NameValueCollection Query)
+        public static string GetTransport(NameValueCollection QueryString)
         {
-            return Query["transport"]?.Trim()?.ToLower() ?? string.Empty;
+            return QueryString["transport"]?.Trim()?.ToLower() ?? string.Empty;
         }
 
-        public static string GetSID(NameValueCollection Query)
+        public static string GetSID(NameValueCollection QueryString)
         {
-            return Query["sid"]?.Trim() ?? string.Empty;
+            return QueryString["sid"]?.Trim() ?? string.Empty;
+        }
+
+        public static string GetUserAgent(NameValueCollection Headers)
+        {
+            return (Headers["user-agent"] ?? Headers["User-Agent"])?.Trim() ?? string.Empty;
         }
 
         public static EngineIOHttpMethod ParseMethod(string Method)
@@ -112,6 +115,12 @@ namespace EngineIOSharp.Common.Static
 
                 using (Response.OutputStream)
                 {
+                    Response.KeepAlive = false;
+
+                    Response.ContentType = "application/json";
+                    Response.ContentEncoding = Encoding.UTF8;
+                    Response.ContentLength64 = RawData.Length;
+
                     Response.OutputStream.Write(RawData, 0, RawData.Length);
                 }
             }

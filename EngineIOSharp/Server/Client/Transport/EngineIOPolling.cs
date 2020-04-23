@@ -3,13 +3,7 @@ using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.IO.Compression;
-using System.Linq;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using WebSocketSharp.Net;
 
 namespace EngineIOSharp.Server.Client.Transport
@@ -18,90 +12,158 @@ namespace EngineIOSharp.Server.Client.Transport
     {
         public static readonly string Name = "polling";
 
-        private readonly Semaphore Semaphore = new Semaphore(0, 1);
+        private HttpListenerRequest PollRequest;
+        private HttpListenerResponse PollResponse;
 
-        private HttpListenerRequest Request;
-        private HttpListenerResponse Response;
+        private HttpListenerRequest DataRequest;
+        private HttpListenerResponse DataResponse;
 
         private Action ShouldClose;
+        private EngineIOTimeout CloseTimer;
 
-        internal EngineIOPolling()
+        private readonly string Origin;
+
+        public EngineIOPolling(HttpListenerRequest Request)
         {
-            Semaphore.Release();
+            Origin = Request.Headers["Origin"]?.Trim() ?? string.Empty;
         }
 
         protected override void CloseInternal(Action Callback)
         {
-            throw new NotImplementedException();
+            void OnClose()
+            {
+                CloseTimer?.Stop();
+                Callback?.Invoke();
+                this.OnClose();
+            }
+
+            DataRequest = null;
+            DataResponse?.Close(); DataResponse = null;
+
+            if (Writable)
+            {
+                Send(EngineIOPacket.CreateClosePacket());
+                OnClose();
+            }
+            else if (Discarded)
+            {
+                OnClose();
+            } 
+            else
+            {
+                ShouldClose = OnClose;
+                CloseTimer = new EngineIOTimeout(OnClose, 30 * 1000);
+            }
         }
 
         internal override EngineIOTransport Send(params EngineIOPacket[] Packets)
         {
-            Semaphore.WaitOne();
-
-            ThreadPool.QueueUserWorkItem((_) =>
+            if (Packets != null)
             {
-                if (Packets != null)
+                bool DoClose = ShouldClose != null;
+                Writable = false;
+
+                if (DoClose)
                 {
-                    bool DoClose = ShouldClose != null;
-                    Writable = false;
-
-                    if (DoClose)
-                    {
-                        ShouldClose();
-                        ShouldClose = null;
-                    }
-
-                    foreach (EngineIOPacket Packet in Packets)
-                    {
-                        Send(Packet);
-                    }
+                    ShouldClose();
+                    ShouldClose = null;
                 }
 
-                Semaphore.Release();
-            });
+                StringBuilder EncodedPackets = new StringBuilder();
+
+                foreach (EngineIOPacket Packet in Packets)
+                {
+                    EncodedPackets.Append(Packet.Encode(true));
+                }
+
+                Send(EncodedPackets.ToString());
+            }
 
             return this;
         }
 
-        private void Send(EngineIOPacket Packet)
+        private void Send(string EncodedPacket, Action<Exception> OnException = null)
         {
-            using (Response)
+            using (PollResponse)
             {
                 try
                 {
-                    Response.ContentType = "text/plain; charset=UTF-8";
-                    Response.Headers["Content-Encoding"] = "gzip";
+                    byte[] RawData = Encoding.UTF8.GetBytes(EncodedPacket);
+                    PollResponse.Headers = SetHeaders(PollResponse.Headers);
 
-                    using (MemoryStream Stream = new MemoryStream())
+                    using (PollResponse.OutputStream)
                     {
-                        using (GZipStream GZipStream = new GZipStream(Stream, CompressionMode.Compress))
-                        using (StreamWriter Writer = new StreamWriter(GZipStream))
-                        {
-                            Writer.Write(Packet.Encode(true) as string);
-                        }
+                        PollResponse.KeepAlive = false;
 
-                        byte[] RawData = Stream.ToArray();
-                        Response.ContentLength64 = RawData.Length;
+                        PollResponse.ContentType = "text/plain; charset=UTF-8";
+                        PollResponse.ContentEncoding = Encoding.UTF8;
+                        PollResponse.ContentLength64 = RawData.Length;
 
-                        using (Response.OutputStream)
-                        {
-                            Response.OutputStream.Write(RawData, 0, RawData.Length);
-                        }
+                        PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
                     }
                 }
-                catch
+                catch (Exception Exception)
                 {
-                    CloseResponse(Response);
-                }
-                finally
-                {
-                    Semaphore.Release();
-                    Cleanup();
+                    OnException?.Invoke(Exception);
+                    CloseResponse(PollResponse);
                 }
             }
+
+            CleanupPollRequest();
         }
-            
+
+        private WebHeaderCollection SetHeaders(WebHeaderCollection Headers)
+        {
+            string UserAgent = EngineIOHttpManager.GetUserAgent(Headers);
+
+            if (UserAgent.Contains(";MSIE") || UserAgent.Contains("Trident/"))
+            {
+                Headers["X-XSS-Protection"] = "0";
+            }
+
+            if (!string.IsNullOrEmpty(Origin))
+            {
+                Headers["Access-Control-Allow-Credentials"] = "true";
+                Headers["Access-Control-Allow-Origin"] = Origin;
+            }
+            else
+            {
+                Headers["Access-Control-Allow-Origin"] = "*";
+            }
+
+            Emit(Event.HEADERS, Headers);
+            return Headers;
+        }
+
+        private void CloseResponse(HttpListenerResponse Response)
+        {
+            try
+            {
+                if (Response != null)
+                {
+                    using (Response)
+                    {
+                        Response.StatusCode = 500;
+                    }
+                }
+            }
+            catch
+            {
+
+            }
+        }
+
+        private void CleanupPollRequest()
+        {
+            PollRequest = null;
+            PollResponse = null;
+        }
+
+        private void CleanupDataRequest()
+        {
+            DataRequest = null;
+            DataResponse = null;
+        }
 
         internal override EngineIOTransport OnRequest(HttpListenerRequest Request, HttpListenerResponse Response)
         {
@@ -125,49 +187,92 @@ namespace EngineIOSharp.Server.Client.Transport
 
         private void OnPollRequest(HttpListenerRequest Request, HttpListenerResponse Response)
         {
-            if (this.Request == null)
+            try
             {
-                this.Request = Request;
-                this.Response = Response;
-
-                Writable = true;
-                Emit(Event.DRAIN);
-
-                if (Writable && ShouldClose != null)
+                if (PollRequest == null)
                 {
+                    PollRequest = Request;
+                    PollResponse = Response;
 
+                    Writable = true;
+                    Emit(Event.DRAIN);
+
+                    if (Writable && ShouldClose != null)
+                    {
+                        Send(EngineIOPacket.CreateNoopPacket().Encode(true) as string, OnPollRequestClose);
+                    }
+                }
+                else
+                {
+                    throw new EngineIOException("Overlap from client");
                 }
             }
-            else
+            catch (Exception Exception)
             {
-                EngineIOLogger.Error("Overlap from client", new Exception());
-
                 CloseResponse(Response);
+                OnPollRequestClose(Exception);
             }
         }
 
-        private void OnRequestClose()
+        private void OnPollRequestClose(Exception Exception)
         {
-            OnError("Poll connection closed prematurely.", new Exception());
-        }
-
-        private void Cleanup()
-        {
-            Request = null;
-            Response = null;
-        }
-
-        private void CloseResponse(HttpListenerResponse Response)
-        {
-            using (Response)
-            {
-                Response.StatusCode = 500;
-            }
+            CleanupPollRequest();
+            OnError("Poll connection closed prematurely.", Exception);
         }
 
         private void OnDataRequest(HttpListenerRequest Request, HttpListenerResponse Response)
         {
-            throw new NotImplementedException();
+            using (Response)
+            {
+                try
+                {
+                    if (DataRequest == null)
+                    {
+                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request);
+                        Response.Headers = SetHeaders(Response.Headers);
+
+                        using (Response.OutputStream)
+                        {
+                            Response.KeepAlive = false;
+
+                            Response.ContentType = "text/html";
+                            Response.ContentEncoding = Encoding.UTF8;
+                            Response.ContentLength64 = 2;
+
+                            Response.OutputStream.Write(Encoding.UTF8.GetBytes("ok"), 0, 2);
+                        }
+
+                        foreach (EngineIOPacket Packet in Packets)
+                        {
+                            if (Packet.Type != EngineIOPacketType.CLOSE)
+                            {
+                                OnPacket(Packet);
+                            }
+                            else
+                            {
+                                OnClose();
+                            }
+                        }
+
+                        CleanupDataRequest();
+                    }
+                    else
+                    {
+                        throw new EngineIOException("Data request overlap from client");
+                    }
+                }
+                catch (Exception Exception)
+                {
+                    CloseResponse(Response);
+                    OnDataRequestClose(Exception);
+                }
+            }
+        }
+
+        private void OnDataRequestClose(Exception Exception)
+        {
+            CleanupDataRequest();
+            OnError("Data request connection closed prematurely", Exception);
         }
     }
 }

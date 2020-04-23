@@ -82,10 +82,18 @@ namespace EngineIOSharp.Server.Client
                 .On(EngineIOTransport.Event.DRAIN, OnDrain)
                 .On(EngineIOTransport.Event.PACKET, (Packet) => OnPacket(Packet as EngineIOPacket))
                 .Once(EngineIOTransport.Event.ERROR, (Exception) => OnError(Exception as Exception))
-                .Once(EngineIOTransport.Event.CLOSE, (Arguments) =>
+                .Once(EngineIOTransport.Event.CLOSE, (Argument) =>
                 {
-                    object[] Temp = Arguments as object[];
-                    OnClose(Temp[0] as string, Temp[1] as Exception);
+                    object[] Temp = Argument as object[];
+
+                    if (Temp != null)
+                    {
+                        OnClose(Temp[0] as string, Temp[1] as Exception);
+                    }
+                    else
+                    {
+                        OnClose("Transport closed");
+                    }
                 });
 
             Cleanup.Enqueue(() => this.Transport.Off());
