@@ -1,6 +1,4 @@
 # EngineIOSharp
-This project is still ongoing.
-
 - [x] Client : Done
 - [x] Server : Done
 
