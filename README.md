@@ -1,5 +1,7 @@
 # EngineIOSharp
 This project is still ongoing.
 
-- [x] Client : Done, but need to test it enough.
-- [ ] Server
+- [x] Client : Done
+- [x] Server : Done
+
+Theses features need enough test yet.
