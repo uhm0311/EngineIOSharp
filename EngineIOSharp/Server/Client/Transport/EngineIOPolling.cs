@@ -4,13 +4,21 @@ using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
 using System.Collections.Generic;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using WebSocketSharp.Net;
+using Timer = System.Timers.Timer;
 
 namespace EngineIOSharp.Server.Client.Transport
 {
     internal class EngineIOPolling : EngineIOTransport
     {
+        private readonly string Origin;
+
+        private readonly Timer ConnectionTimer;
+        private readonly Semaphore Semaphore = new Semaphore(0, 1);
+
         private HttpListenerRequest PollRequest;
         private HttpListenerResponse PollResponse;
 
@@ -20,13 +28,21 @@ namespace EngineIOSharp.Server.Client.Transport
         private Action ShouldClose;
         private EngineIOTimeout CloseTimer;
 
-        private readonly string Origin;
-        private readonly bool ForceBase64;
-
         public EngineIOPolling(HttpListenerRequest Request)
         {
-            Origin = Request.Headers["Origin"]?.Trim() ?? string.Empty;
+            Origin = EngineIOHttpManager.GetOrigin(Request.Headers);
             ForceBase64 = int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
+
+            ConnectionTimer = new Timer(1) { AutoReset = true };
+            ConnectionTimer.Elapsed += (_, __) =>
+            {
+                if (PollResponse?.IsDisconnected ?? false)
+                {
+                    OnPollRequestClose(new SocketException());
+                }
+            };
+
+            ConnectionTimer.Start();
         }
 
         protected override void CloseInternal(Action Callback)
@@ -38,8 +54,21 @@ namespace EngineIOSharp.Server.Client.Transport
                 this.OnClose();
             }
 
+            if (DataResponse != null)
+            {
+                try
+                {
+                    DataResponse.Headers = SetHeaders(DataResponse.Headers);
+                    DataResponse.Close();
+                }
+                catch
+                {
+
+                }
+            }
+
             DataRequest = null;
-            DataResponse?.Close(); DataResponse = null;
+            DataResponse = null;
 
             if (Writable)
             {
@@ -55,56 +84,63 @@ namespace EngineIOSharp.Server.Client.Transport
                 ShouldClose = OnClose;
                 CloseTimer = new EngineIOTimeout(OnClose, 30 * 1000);
             }
+
+            ConnectionTimer.Stop();
         }
 
         internal override EngineIOTransport Send(params EngineIOPacket[] Packets)
         {
             if (Packets != null)
             {
-                bool DoClose = ShouldClose != null;
                 Writable = false;
 
-                if (DoClose)
+                ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    ShouldClose();
-                    ShouldClose = null;
-                }
+                    bool DoClose = ShouldClose != null;
+                    Semaphore.WaitOne();
 
-                bool HasBinary = false;
-
-                if (!ForceBase64)
-                {
-                    foreach (EngineIOPacket Packet in Packets)
+                    if (DoClose)
                     {
-                        if (HasBinary = Packet.IsBinary)
+                        ShouldClose();
+                        ShouldClose = null;
+                    }
+
+                    bool HasBinary = false;
+
+                    if (!ForceBase64)
+                    {
+                        foreach (EngineIOPacket Packet in Packets)
                         {
-                            break;
+                            if (HasBinary = Packet.IsBinary)
+                            {
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (HasBinary)
-                {
-                    List<byte> EncodedPacktes = new List<byte>();
-
-                    foreach (EngineIOPacket Packet in Packets)
+                    if (HasBinary)
                     {
-                        EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
+                        List<byte> EncodedPacktes = new List<byte>();
+
+                        foreach (EngineIOPacket Packet in Packets)
+                        {
+                            EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
+                        }
+
+                        Send(EncodedPacktes.ToArray());
                     }
-
-                    Send(EncodedPacktes.ToArray());
-                }
-                else
-                {
-                    StringBuilder EncodedPackets = new StringBuilder();
-
-                    foreach (EngineIOPacket Packet in Packets)
+                    else
                     {
-                        EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
-                    }
+                        StringBuilder EncodedPackets = new StringBuilder();
 
-                    Send(EncodedPackets.ToString());
-                }
+                        foreach (EngineIOPacket Packet in Packets)
+                        {
+                            EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
+                        }
+
+                        Send(EncodedPackets.ToString());
+                    }
+                });
             }
 
             return this;
@@ -145,8 +181,11 @@ namespace EngineIOSharp.Server.Client.Transport
                 }
                 catch (Exception Exception)
                 {
-                    OnException?.Invoke(Exception);
-                    CloseResponse(PollResponse);
+                    if (!(Exception is NullReferenceException))
+                    {
+                        OnException?.Invoke(Exception);
+                        CloseResponse(PollResponse);
+                    }
                 }
             }
 
@@ -235,6 +274,7 @@ namespace EngineIOSharp.Server.Client.Transport
                     PollRequest = Request;
                     PollResponse = Response;
 
+                    Semaphore.Release();
                     Writable = true;
                     Emit(Event.DRAIN);
 

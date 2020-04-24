@@ -87,6 +87,16 @@ namespace EngineIOSharp.Common.Static
             return (Headers["user-agent"] ?? Headers["User-Agent"])?.Trim() ?? string.Empty;
         }
 
+        public static string GetOrigin(NameValueCollection Headers)
+        {
+            return (Headers["Origin"] ?? Headers["origin"])?.Trim() ?? string.Empty;
+        }
+
+        public static bool IsBase64Forced(NameValueCollection QueryString)
+        {
+            return int.TryParse(QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
+        }
+
         public static EngineIOHttpMethod ParseMethod(string Method)
         {
             return (EngineIOHttpMethod)System.Enum.Parse(typeof(EngineIOHttpMethod), Method.Trim().ToUpper());
@@ -101,7 +111,7 @@ namespace EngineIOSharp.Common.Static
 
                 if (EngineIOServer.Exceptions.Contains(Exception))
                 {
-                    string Origin = Request.Headers["Origin"]?.Trim() ?? string.Empty;
+                    string Origin = GetOrigin(Request.Headers);
 
                     if (!string.IsNullOrWhiteSpace(Origin))
                     {

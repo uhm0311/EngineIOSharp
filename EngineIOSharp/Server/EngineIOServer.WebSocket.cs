@@ -53,6 +53,7 @@ namespace EngineIOSharp.Server
                                 if (!(Socket.Upgrading || Socket.Upgraded))
                                 {
                                     Socket.UpgradeTransport(new EngineIOWebSocket(Context));
+                                    AllowWebSocket = true;
                                 }
                                 else
                                 {

@@ -14,6 +14,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
         public bool Discarded { get; protected set; }
         public bool Writable { get; protected set; }
+        protected bool ForceBase64 { get; set; }
 
         protected EngineIOTransport()
         {

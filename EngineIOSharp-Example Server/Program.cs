@@ -1,4 +1,5 @@
-﻿using EngineIOSharp.Server;
+﻿using EngineIOSharp.Common;
+using EngineIOSharp.Server;
 using System;
 
 namespace EngineIOSharp.Example.Server
@@ -7,6 +8,8 @@ namespace EngineIOSharp.Example.Server
     {
         static void Main(string[] args)
         {
+            //EngineIOLogger.DoWrite = false;
+
             using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009)))
             {
                 Console.WriteLine("Listening on " + server.Option.Port);
@@ -48,7 +51,7 @@ namespace EngineIOSharp.Example.Server
                 }
             }
 
-            Console.WriteLine("Press any key to continue...");
+            Console.WriteLine("Press enter to continue...");
             Console.Read();
         }
     }

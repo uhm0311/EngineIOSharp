@@ -25,10 +25,19 @@ namespace EngineIOSharp.Server
         public EngineIOServer(EngineIOServerOption Option)
         {
             Server = new HttpServer(Option.Port, Option.Secure) { AutoClose = false };
-            Server.AddWebSocketService(Option.Path, CreateBehavior);
             Server.OnGet += OnHttpRequest;
             Server.OnPost += OnHttpRequest;
-            
+            Server.OnConnect += OnHttpRequest;
+            Server.OnDelete += OnHttpRequest;
+            Server.OnHead += OnHttpRequest;
+            Server.OnOptions += OnHttpRequest;
+            Server.OnPatch += OnHttpRequest;
+            Server.OnPut += OnHttpRequest;
+            Server.OnTrace += OnHttpRequest;
+#pragma warning disable CS0618
+            Server.AddWebSocketService(Option.Path, CreateBehavior);
+#pragma warning restore CS0618
+
             if ((this.Option = Option).Secure)
             {
                 Server.SslConfiguration.ServerCertificate = Option.ServerCertificate;
@@ -71,7 +80,7 @@ namespace EngineIOSharp.Server
 
                 if (IsPolling || IsWebSocket)
                 {
-                    if (EngineIOHttpManager.IsValidHeader(Headers["Origin"]?.Trim() ?? string.Empty))
+                    if (EngineIOHttpManager.IsValidHeader(EngineIOHttpManager.GetOrigin(Headers)))
                     {
                         Exception = null;
                     }

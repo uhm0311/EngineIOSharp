@@ -63,7 +63,7 @@ namespace EngineIOSharp.Common.Packet
                             Builder.Append((int)Type);
                             Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
 
-                            int Length = Encoding.UTF8.GetByteCount(Builder.ToString()) + (IsText ? 0 : 1);
+                            int Length = Builder.Length + (IsText ? 0 : 1);
                             Builder.Insert(0, string.Format("{0}:" + (IsText ? "" : "b"), Length));
 
                             return Builder.ToString();
@@ -95,11 +95,11 @@ namespace EngineIOSharp.Common.Packet
                     }
                     else
                     {
-                        if (!ForceBinary&& (IsText || ForceBase64))
+                        if (!ForceBinary && (IsText || ForceBase64))
                         {
                             StringBuilder Builder = new StringBuilder();
-                            Builder.Append((int)Type);
-                            Builder.Append(IsText ? Data : "b" + Convert.ToBase64String(RawData));
+                            Builder.Append((IsText ? "" : "b") + (int)Type);
+                            Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
 
                             return Builder.ToString();
                         }
@@ -117,7 +117,7 @@ namespace EngineIOSharp.Common.Packet
             }
             catch (Exception Exception)
             {
-                throw new EngineIOException("Packet encoding failed. " + this, Exception);
+                return CreateErrorPacket(Exception);
             }
         }
     }

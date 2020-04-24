@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Client;
+using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using System;
 using System.Text;
@@ -9,6 +10,8 @@ namespace EngineIOSharp.Example.Client
     {
         static void Main(string[] args)
         {
+            //EngineIOLogger.DoWrite = false;
+
             using (EngineIOClient client = new EngineIOClient(new EngineIOClientOption(EngineIOScheme.http, "localhost", 1009)))
             {
                 client.OnOpen(() =>
@@ -41,7 +44,7 @@ namespace EngineIOSharp.Example.Client
                 }
             }
 
-            Console.WriteLine("Press any key to continue...");
+            Console.WriteLine("Press enter to continue...");
             Console.Read();
         }
     }

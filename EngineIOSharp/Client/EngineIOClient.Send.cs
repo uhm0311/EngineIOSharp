@@ -9,20 +9,14 @@ namespace EngineIOSharp.Client
     {
         public EngineIOClient Send(string Data, Action Callback = null)
         {
-            if (!string.IsNullOrEmpty(Data))
-            {
-                Send(EngineIOPacket.CreateMessagePacket(Data), Callback);
-            }
+            Send(EngineIOPacket.CreateMessagePacket(Data ?? string.Empty), Callback);
 
             return this;
         }
 
         public EngineIOClient Send(byte[] RawData, Action Callback = null)
         {
-            if ((RawData?.Length ?? 0) > 0)
-            {
-                Send(EngineIOPacket.CreateMessagePacket(RawData), Callback);
-            }
+            Send(EngineIOPacket.CreateMessagePacket(RawData ?? new byte[0]), Callback);
 
             return this;
         }

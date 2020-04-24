@@ -31,6 +31,6 @@
     <PackageReference Include="EmitterSharp" Version="1.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
     <PackageReference Include="SimpleThreadMonitor" Version="1.0.2" />
-    <PackageReference Include="WebSocketSharp.CustomHeaders.CustomHttpServer" Version="1.0.2.1" />
+    <PackageReference Include="WebSocketSharp.CustomHeaders.CustomHttpServer" Version="1.0.2.3" />
   </ItemGroup>
 </Project>

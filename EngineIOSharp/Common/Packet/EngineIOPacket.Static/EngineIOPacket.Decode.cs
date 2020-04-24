@@ -189,11 +189,7 @@ namespace EngineIOSharp.Common.Packet
 
                                 if (Data.StartsWith("b"))
                                 {
-                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Data[1].ToString()) };
-                                    Data = Data.Substring(2);
-
-                                    RawBuffer.AddRange(Convert.FromBase64String(Data));
-                                    Result.Add(Decode(RawBuffer.ToArray()));
+                                    Result.Add(DecodeBase64String(Data));
                                 }
                                 else
                                 {
@@ -216,7 +212,35 @@ namespace EngineIOSharp.Common.Packet
 
         internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
         {
-            return EventArgs.IsText ? Decode(EventArgs.Data) : (EventArgs.IsBinary ? Decode(EventArgs.RawData) : null);
+            if (EventArgs.IsText)
+            {
+                string Data = EventArgs.Data;
+
+                if (Data.StartsWith("b"))
+                {
+                    return DecodeBase64String(Data);
+                }
+                else
+                {
+                    return Decode(Data);
+                }
+            }
+            else if (EventArgs.IsBinary)
+            {
+                return Decode(EventArgs.RawData);
+            }
+            else
+            {
+                return CreateNoopPacket();
+            }
+        }
+
+        private static EngineIOPacket DecodeBase64String(string Data)
+        {
+            List<byte> RawBuffer = new List<byte>() { byte.Parse(Data[1].ToString()) };
+
+            RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(2)));
+            return Decode(RawBuffer.ToArray());
         }
     }
 }

@@ -104,71 +104,70 @@ namespace EngineIOSharp.Client.Transport
         {
             Semaphores[Method].WaitOne();
 
-            ThreadPool.QueueUserWorkItem((_) =>
+            try
             {
-                try
+                HttpWebRequest Request = CreateRequest(Method);
+
+                if (EncodedPacket != null)
                 {
-                    HttpWebRequest Request = CreateRequest(Method);
-
-                    if (EncodedPacket != null)
+                    using (Stream Stream = Request.GetRequestStream())
                     {
-                        using (Stream Stream = Request.GetRequestStream())
+                        byte[] RawData = null;
+
+                        if (EncodedPacket is string)
                         {
-                            byte[] RawData = null;
+                            Request.Headers["Content-Encoding"] = "utf8";
+                            RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                        }
+                        else if (EncodedPacket is byte[])
+                        {
+                            RawData = EncodedPacket as byte[];
+                        }
 
-                            if (EncodedPacket is string)
-                            {
-                                RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
-                            }
-                            else if (EncodedPacket is byte[])
-                            {
-                                RawData = EncodedPacket as byte[];
-                            }
-
-                            if (RawData != null)
-                            {
-                                Stream.Write(RawData, 0, RawData.Length);
-                            }
+                        if (RawData != null)
+                        {
+                            Request.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
+                            Stream.Write(RawData, 0, RawData.Length);
                         }
                     }
+                }
 
-                    HttpWebResponse Response = null;
-                    Exception ResponseException = null;
+                HttpWebResponse Response = null;
+                Exception ResponseException = null;
 
-                    try 
-                    { 
-                        Response = Request.GetResponse() as HttpWebResponse; 
-                    }
-                    catch (Exception Exception) 
-                    { 
-                        ResponseException = Exception; 
-                    }
-                    finally 
-                    { 
-                        Semaphores[Method].Release(); 
-                    }
-
-                    if (ResponseException != null)
-                    {
-                        throw ResponseException;
-                    }
-                    else if (Response != null)
-                    {
-                        HandleResponse(Method, Response);
-                    }
+                try
+                {
+                    Response = Request.GetResponse() as HttpWebResponse;
                 }
                 catch (Exception Exception)
                 {
-                    if (ErrorCallback == null)
-                    {
-                        OnError("Error", Exception);
-                    }
-                    else
-                    {
-                        ErrorCallback(Exception);
-                    }
+                    ResponseException = Exception;
                 }
-            });
+                finally
+                {
+                    Semaphores[Method].Release();
+                }
+
+                if (ResponseException != null)
+                {
+                    throw ResponseException;
+                }
+                else if (Response != null)
+                {
+                    HandleResponse(Method, Response);
+                }
+            }
+            catch (Exception Exception)
+            {
+                if (ErrorCallback == null)
+                {
+                    OnError("Error", Exception);
+                }
+                else
+                {
+                    ErrorCallback(Exception);
+                }
+            }
         }
 
         private HttpWebRequest CreateRequest(EngineIOHttpMethod Method)
@@ -181,7 +180,11 @@ namespace EngineIOSharp.Client.Transport
                 URL.Append(Key).Append('=').Append(Option.Query[Key]).Append('&');
             }
 
-            URL.Append("b64=1&");
+            if (Option.ForceBase64)
+            {
+                URL.Append("b64=1&");
+            }
+
             URL.Append("transport=polling");
 
             if (Option.TimestampRequests ?? true)
