@@ -3,6 +3,7 @@ using EngineIOSharp.Client.Transport;
 using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
+using EngineIOSharp.Common.Static;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
@@ -248,7 +249,7 @@ namespace EngineIOSharp.Client
             {
                 foreach (string Upgrade in Handshake.Upgrades)
                 {
-                    if (Upgrade.Trim().ToLower().Equals("websocket"))
+                    if (EngineIOHttpManager.IsWebSocket(Upgrade))
                     {
                         Probe();
                         break;
@@ -304,7 +305,7 @@ namespace EngineIOSharp.Client
                         break;
 
                     case EngineIOPacketType.PONG:
-                        Pong++;
+                        SimpleMutex.Lock(PongMutex, () => Pong++);
                         break;
 
                     case EngineIOPacketType.MESSAGE:
@@ -312,7 +313,7 @@ namespace EngineIOSharp.Client
                         break;
 
                     case EngineIOPacketType.UNKNOWN:
-                        OnError(new EngineIOException(string.Format("Server error : {0}", Packet.Data)));
+                        OnError(new EngineIOException(string.Format("Parse error : {0}", Packet.Data)));
                         break;
                 }
             }
@@ -342,26 +343,6 @@ namespace EngineIOSharp.Client
 
             Emit(Event.ERROR, Exception);
             OnClose("Transport error", Exception);
-        }
-
-        public static class Event
-        {
-            public static readonly string OPEN = "open";
-            public static readonly string HANDSHAKE = "handshake";
-
-            public static readonly string ERROR = "error";
-            public static readonly string CLOSE = "close";
-
-            public static readonly string PACKET = "packet";
-            public static readonly string MESSAGE = "message";
-
-            public static readonly string PACKET_CREATE = "packetCreate";
-            public static readonly string FLUSH = "flush";
-            public static readonly string DRAIN = "drain";
-
-            public static readonly string UPGRADE = "upgrade";
-            public static readonly string UPGRADING = "upgrading";
-            public static readonly string UPGRADE_ERROR = "upgradeError";
         }
     }
 }

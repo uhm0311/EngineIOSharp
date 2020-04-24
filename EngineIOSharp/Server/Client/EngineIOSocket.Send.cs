@@ -3,18 +3,18 @@ using EngineIOSharp.Common.Packet;
 using SimpleThreadMonitor;
 using System;
 
-namespace EngineIOSharp.Client
+namespace EngineIOSharp.Server.Client
 {
-    partial class EngineIOClient
+    partial class EngineIOSocket
     {
-        public EngineIOClient Send(string Data, Action Callback = null)
+        public EngineIOSocket Send(string Data, Action Callback = null)
         {
             Send(EngineIOPacket.CreateMessagePacket(Data ?? string.Empty), Callback);
 
             return this;
         }
 
-        public EngineIOClient Send(byte[] RawData, Action Callback = null)
+        public EngineIOSocket Send(byte[] RawData, Action Callback = null)
         {
             Send(EngineIOPacket.CreateMessagePacket(RawData ?? new byte[0]), Callback);
 

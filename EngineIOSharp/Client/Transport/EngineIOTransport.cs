@@ -10,6 +10,8 @@ namespace EngineIOSharp.Client.Transport
 {
     internal abstract class EngineIOTransport : Emitter<EngineIOTransport, string, object>
     {
+        private readonly Semaphore Semaphore = new Semaphore(0, 1);
+
         protected EngineIOClientOption Option { get; private set; }
 
         public EngineIOReadyState ReadyState { get; protected set; }
@@ -21,6 +23,8 @@ namespace EngineIOSharp.Client.Transport
 
             ReadyState = EngineIOReadyState.CLOSED;
             Writable = false;
+
+            Semaphore.Release();
         }
 
         internal EngineIOTransport Open()
@@ -55,24 +59,34 @@ namespace EngineIOSharp.Client.Transport
         {
             if (Packets != null)
             {
-                if (ReadyState == EngineIOReadyState.OPEN)
+                Writable = false;
+
+                ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    try
+                    Semaphore.WaitOne();
+
+                    if (ReadyState == EngineIOReadyState.OPEN)
                     {
-                        foreach (EngineIOPacket Packet in Packets)
+                        try
                         {
-                            SendInternal(Packet);
+                            foreach (EngineIOPacket Packet in Packets)
+                            {
+                                SendInternal(Packet);
+                            }
+                        }
+                        catch (Exception Exception)
+                        {
+                            EngineIOLogger.Error(this, Exception);
                         }
                     }
-                    catch (Exception Exception)
+                    else
                     {
-                        EngineIOLogger.Error(this, Exception);
+                        EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
                     }
-                }
-                else
-                {
-                    EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
-                }
+
+                    Semaphore.Release();
+                    Writable = true;
+                });
             }
 
             return this;

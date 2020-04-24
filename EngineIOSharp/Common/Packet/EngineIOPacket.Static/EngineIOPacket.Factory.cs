@@ -1,4 +1,6 @@
-﻿using Newtonsoft.Json.Linq;
+﻿using EngineIOSharp.Common.Enum.Internal;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Text;
 
@@ -6,20 +8,27 @@ namespace EngineIOSharp.Common.Packet
 {
     partial class EngineIOPacket
     {
-        internal static EngineIOPacket CreateErrorPacket(Exception Exception)
+        internal static EngineIOPacket CreateErrorPacket(Exception Exception = null)
         {
-            return CreatePacket(EngineIOPacketType.UNKNOWN, Exception.ToString());
+            return CreatePacket(EngineIOPacketType.UNKNOWN, Exception?.ToString() ?? string.Empty);
         }
 
-        internal static EngineIOPacket CreateOpenPacket(string SocketID, int PingInterval, int PingTimeout)
+        internal static EngineIOPacket CreateOpenPacket(string SocketID, ulong PingInterval, ulong PingTimeout, bool Upgrade)
         {
+            JArray Upgrades = new JArray();
+
+            if (Upgrade)
+            {
+                Upgrades.Add(EngineIOTransportType.websocket.ToString());
+            }
+
             return CreatePacket(EngineIOPacketType.OPEN, new JObject()
             {
                 ["sid"] = SocketID,
                 ["pingInterval"] = PingInterval,
                 ["pingTimeout"] = PingTimeout,
-                ["upgrades"] = new JArray()
-            }.ToString());
+                ["upgrades"] = Upgrades
+            }.ToString(Formatting.None));
         }
 
         internal static EngineIOPacket CreateClosePacket()
@@ -50,6 +59,11 @@ namespace EngineIOSharp.Common.Packet
         internal static EngineIOPacket CreateUpgradePacket()
         {
             return CreatePacket(EngineIOPacketType.UPGRADE);
+        }
+
+        internal static EngineIOPacket CreateNoopPacket()
+        {
+            return CreatePacket(EngineIOPacketType.NOOP);
         }
 
         private static EngineIOPacket CreatePacket(EngineIOPacketType Type)

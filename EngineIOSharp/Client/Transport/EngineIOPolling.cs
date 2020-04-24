@@ -1,4 +1,5 @@
 ﻿using EngineIOSharp.Common.Enum;
+using EngineIOSharp.Common.Enum.Internal;
 using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
@@ -12,15 +13,15 @@ namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOPolling : EngineIOTransport
     {
-        private readonly Dictionary<HttpMethod, Semaphore> Semaphores = new Dictionary<HttpMethod, Semaphore>();
+        private readonly Dictionary<EngineIOHttpMethod, Semaphore> Semaphores = new Dictionary<EngineIOHttpMethod, Semaphore>();
 
         private readonly CookieContainer Cookies = new CookieContainer();
         private bool Polling = false;
 
         public EngineIOPolling(EngineIOClientOption Option) : base(Option) 
         {
-            Semaphores.Add(HttpMethod.GET, new Semaphore(0, 1));
-            Semaphores.Add(HttpMethod.POST, new Semaphore(0, 1));
+            Semaphores.Add(EngineIOHttpMethod.GET, new Semaphore(0, 1));
+            Semaphores.Add(EngineIOHttpMethod.POST, new Semaphore(0, 1));
 
             foreach (Semaphore Semaphore in Semaphores.Values)
             {
@@ -96,87 +97,80 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            if (Packet.IsBinary || Packet.IsText)
-            {
-                Writable = false;
-
-                StringBuilder Builder = new StringBuilder();
-                Builder.Append((int)Packet.Type);
-                Builder.Append(Packet.IsText ? Packet.Data : Convert.ToBase64String(Packet.RawData));
-
-                int Length = Encoding.UTF8.GetByteCount(Builder.ToString());
-
-                if (Packet.IsText)
-                {
-                    Builder.Insert(0, string.Format("{0}:", Length));
-                }
-                else
-                {
-                    Builder.Insert(0, string.Format("{0}:b", Length + 1));
-                }
-
-                Request(HttpMethod.POST, Builder.ToString(), (Exception) => OnError("Post error", Exception));
-            }
+            Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64), (Exception) => OnError("Post error", Exception));
         }
 
-        private void Request(HttpMethod Method = HttpMethod.GET, string Data = "", Action<Exception> ErrorCallback = null)
+        private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, object EncodedPacket = null, Action<Exception> ErrorCallback = null)
         {
             Semaphores[Method].WaitOne();
 
-            ThreadPool.QueueUserWorkItem((_) =>
+            try
             {
-                try
-                {
-                    HttpWebRequest Request = CreateRequest(Method);
+                HttpWebRequest Request = CreateRequest(Method);
 
-                    if (!string.IsNullOrWhiteSpace(Data))
+                if (EncodedPacket != null)
+                {
+                    using (Stream Stream = Request.GetRequestStream())
                     {
-                        using (StreamWriter Writer = new StreamWriter(Request.GetRequestStream()))
+                        byte[] RawData = null;
+
+                        if (EncodedPacket is string)
                         {
-                            Writer.Write(Data);
+                            Request.Headers["Content-Encoding"] = "utf8";
+                            RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                        }
+                        else if (EncodedPacket is byte[])
+                        {
+                            RawData = EncodedPacket as byte[];
+                        }
+
+                        if (RawData != null)
+                        {
+                            Request.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
+                            Stream.Write(RawData, 0, RawData.Length);
                         }
                     }
+                }
 
-                    HttpWebResponse Response = null;
-                    Exception ResponseException = null;
+                HttpWebResponse Response = null;
+                Exception ResponseException = null;
 
-                    try 
-                    { 
-                        Response = Request.GetResponse() as HttpWebResponse; 
-                    }
-                    catch (Exception Exception) 
-                    { 
-                        ResponseException = Exception; 
-                    }
-                    finally 
-                    { 
-                        Semaphores[Method].Release(); 
-                    }
-
-                    if (ResponseException != null)
-                    {
-                        throw ResponseException;
-                    }
-                    else if (Response != null)
-                    {
-                        HandleResponse(Method, Response);
-                    }
+                try
+                {
+                    Response = Request.GetResponse() as HttpWebResponse;
                 }
                 catch (Exception Exception)
                 {
-                    if (ErrorCallback == null)
-                    {
-                        OnError("Error", Exception);
-                    }
-                    else
-                    {
-                        ErrorCallback(Exception);
-                    }
+                    ResponseException = Exception;
                 }
-            });
+                finally
+                {
+                    Semaphores[Method].Release();
+                }
+
+                if (ResponseException != null)
+                {
+                    throw ResponseException;
+                }
+                else if (Response != null)
+                {
+                    HandleResponse(Method, Response);
+                }
+            }
+            catch (Exception Exception)
+            {
+                if (ErrorCallback == null)
+                {
+                    OnError("Error", Exception);
+                }
+                else
+                {
+                    ErrorCallback(Exception);
+                }
+            }
         }
 
-        private HttpWebRequest CreateRequest(HttpMethod Method)
+        private HttpWebRequest CreateRequest(EngineIOHttpMethod Method)
         {
             StringBuilder URL = new StringBuilder();
             URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme, Option.Host, Option.Port, Option.Path)).Append('?');
@@ -186,7 +180,11 @@ namespace EngineIOSharp.Client.Transport
                 URL.Append(Key).Append('=').Append(Option.Query[Key]).Append('&');
             }
 
-            URL.Append("b64=1&");
+            if (Option.ForceBase64)
+            {
+                URL.Append("b64=1&");
+            }
+
             URL.Append("transport=polling");
 
             if (Option.TimestampRequests ?? true)
@@ -195,6 +193,7 @@ namespace EngineIOSharp.Client.Transport
             }
 
             HttpWebRequest Request = WebRequest.Create(URL.ToString()) as HttpWebRequest;
+            Request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
             Request.Timeout = Option.PollingTimeout == 0 ? Timeout.Infinite : Option.PollingTimeout;
             Request.ServicePoint.Expect100Continue = false;
             Request.Method = Method.ToString();
@@ -235,7 +234,7 @@ namespace EngineIOSharp.Client.Transport
             return Request;
         }
 
-        private void HandleResponse(HttpMethod Method, HttpWebResponse Response)
+        private void HandleResponse(EngineIOHttpMethod Method, HttpWebResponse Response)
         {
             using (Response)
             {
@@ -246,7 +245,7 @@ namespace EngineIOSharp.Client.Transport
                         Cookies.Add(Response.Cookies);
                     }
 
-                    if (Method == HttpMethod.GET)
+                    if (Method == EngineIOHttpMethod.GET)
                     {
                         EngineIOPacket[] Packets = EngineIOPacket.Decode(Response);
 
@@ -286,7 +285,7 @@ namespace EngineIOSharp.Client.Transport
                             }
                         }
                     }
-                    else if (Method == HttpMethod.POST)
+                    else if (Method == EngineIOHttpMethod.POST)
                     {
                         Writable = true;
                         Emit(Event.DRAIN);
@@ -294,11 +293,5 @@ namespace EngineIOSharp.Client.Transport
                 }
             }
         }
-
-        private enum HttpMethod
-        {
-            GET,
-            POST
-        };
     }
 }

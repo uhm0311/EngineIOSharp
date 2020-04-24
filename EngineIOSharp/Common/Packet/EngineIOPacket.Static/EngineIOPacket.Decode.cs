@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Text;
 using WebSocketSharp;
+using HttpListenerRequest = WebSocketSharp.Net.HttpListenerRequest;
 
 namespace EngineIOSharp.Common.Packet
 {
@@ -30,7 +31,9 @@ namespace EngineIOSharp.Common.Packet
             } 
             catch (Exception Exception)
             {
-                throw new EngineIOException("Packet decoding failed. " + Data, Exception);
+                EngineIOLogger.Error("Packet decoding failed. " + Data, Exception);
+
+                return CreateErrorPacket(Exception);
             }
         }
 
@@ -56,44 +59,70 @@ namespace EngineIOSharp.Common.Packet
             }
             catch (Exception Exception)
             {
-                StringBuilder Builder = new StringBuilder();
+                EngineIOLogger.Error("Packet decoding failed. " + RawData != null ? BitConverter.ToString(RawData) : string.Empty, Exception);
 
-                if (RawData != null)
-                {
-                    Builder.Append(BitConverter.ToString(RawData));
-                }
-
-                throw new EngineIOException("Packet decoding failed. " + Builder, Exception);
+                return CreateErrorPacket(Exception);
             }
         }
 
         internal static EngineIOPacket[] Decode(HttpWebResponse Response)
         {
+            if (Response != null)
+            {
+                if (Response.StatusCode == HttpStatusCode.OK)
+                {
+                    return Decode(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
+                }
+                else
+                {
+                    return new EngineIOPacket[] { CreateErrorPacket() };
+                }
+            }
+
+            return new EngineIOPacket[0];
+        }
+
+        internal static EngineIOPacket[] Decode(HttpListenerRequest Request)
+        {
+            if (Request != null)
+            {
+                return Decode(Request.InputStream, Request.ContentType.Equals("application/octet-stream"));
+            }
+
+            return new EngineIOPacket[0];
+        }
+
+        private static EngineIOPacket[] Decode(Stream Stream, bool IsBinary)
+        {
+            List<EngineIOPacket> Result = new List<EngineIOPacket>();
+            object Temp = string.Empty;
+
             try
             {
-                List<EngineIOPacket> Result = new List<EngineIOPacket>();
-
-                if (Response != null && Response.StatusCode == HttpStatusCode.OK)
+                if (IsBinary)
                 {
-                    using (StreamReader Reader = new StreamReader(Response.GetResponseStream()))
+                    using (MemoryStream MemoryStream = new MemoryStream())
                     {
-                        string Content = Reader.ReadToEnd();
+                        Stream.CopyTo(MemoryStream);
+                        Queue<byte> BufferQueue = new Queue<byte>(MemoryStream.ToArray());
 
-                        if (Content.Contains(':'))
+                        if (BufferQueue.Contains(0xff))
                         {
-                            string Buffer;
-                            int Size;
-
-                            while (Content.Length > 0)
+                            while (BufferQueue.Count > 0)
                             {
-                                Buffer = string.Empty;
-                                Size = 0;
+                                List<byte> RawBuffer = new List<byte>();
+                                bool IsText = BufferQueue.Dequeue() == 0;
 
-                                for (int i = 0; i < Content.Length; i++)
+                                StringBuilder Buffer = new StringBuilder();
+                                int Size = 0;
+
+                                while (BufferQueue.Count > 0)
                                 {
-                                    if (Content[i] != ':')
+                                    byte TempSize = BufferQueue.Dequeue();
+
+                                    if (TempSize < 0xff)
                                     {
-                                        Buffer += Content[i];
+                                        Buffer.Append(TempSize);
                                     }
                                     else
                                     {
@@ -101,45 +130,117 @@ namespace EngineIOSharp.Common.Packet
                                     }
                                 }
 
-                                Size = int.Parse(Buffer);
-                                Content = Content.Substring(Buffer.Length + 1);
-                                Buffer = string.Empty;
+                                Size = int.Parse(Buffer.ToString());
+                                Buffer.Clear();
 
                                 for (int i = 0; i < Size; i++)
                                 {
-                                    Buffer += Content[i];
+                                    RawBuffer.Add(BufferQueue.Dequeue());
                                 }
 
-                                Content = Content.Substring(Buffer.Length);
-
-                                if (Buffer.StartsWith("b"))
+                                if (IsText)
                                 {
-                                    List<byte> RawBuffer = new List<byte>() { byte.Parse(Buffer[1].ToString()) };
-                                    Buffer = Buffer.Substring(2);
-
-                                    RawBuffer.AddRange(Convert.FromBase64String(Buffer));
-                                    Result.Add(Decode(RawBuffer.ToArray()));
+                                    Result.Add(Decode(Encoding.UTF8.GetString(RawBuffer.ToArray())));
                                 }
                                 else
                                 {
-                                    Result.Add(Decode(Buffer));
+                                    Result.Add(Decode(RawBuffer.ToArray()));
                                 }
                             }
                         }
                     }
                 }
+                else
+                {
+                    using (StreamReader Reader = new StreamReader(Stream))
+                    {
+                        string Content = (Temp = Reader.ReadToEnd()).ToString();
 
-                return Result.ToArray();
-            } 
+                        if (Content.Contains(':'))
+                        {
+                            while (Content.Length > 0)
+                            {
+                                StringBuilder Buffer = new StringBuilder();
+                                int Size = 0;
+
+                                for (int i = 0; i < Content.Length; i++)
+                                {
+                                    if (Content[i] != ':')
+                                    {
+                                        Buffer.Append(Content[i]);
+                                    }
+                                    else
+                                    {
+                                        break;
+                                    }
+                                }
+
+                                Size = int.Parse(Buffer.ToString());
+                                Content = Content.Substring(Buffer.Length + 1);
+                                Buffer.Clear();
+
+                                for (int i = 0; i < Size; i++)
+                                {
+                                    Buffer.Append(Content[i]);
+                                }
+
+                                Content = Content.Substring(Buffer.Length);
+                                string Data = Buffer.ToString();
+
+                                if (Data.StartsWith("b"))
+                                {
+                                    Result.Add(DecodeBase64String(Data));
+                                }
+                                else
+                                {
+                                    Result.Add(Decode(Data));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             catch (Exception Exception)
             {
-                throw new EngineIOException("Packet decoding failed. " + Response, Exception);
+                EngineIOLogger.Error("Packet decoding failed. " + Temp, Exception);
+
+                Result.Add(CreateErrorPacket(Exception));
             }
+
+            return Result.ToArray();
         }
 
         internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
         {
-            return EventArgs.IsText ? Decode(EventArgs.Data) : (EventArgs.IsBinary ? Decode(EventArgs.RawData) : null);
+            if (EventArgs.IsText)
+            {
+                string Data = EventArgs.Data;
+
+                if (Data.StartsWith("b"))
+                {
+                    return DecodeBase64String(Data);
+                }
+                else
+                {
+                    return Decode(Data);
+                }
+            }
+            else if (EventArgs.IsBinary)
+            {
+                return Decode(EventArgs.RawData);
+            }
+            else
+            {
+                return CreateNoopPacket();
+            }
+        }
+
+        private static EngineIOPacket DecodeBase64String(string Data)
+        {
+            List<byte> RawBuffer = new List<byte>() { byte.Parse(Data[1].ToString()) };
+
+            RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(2)));
+            return Decode(RawBuffer.ToArray());
         }
     }
 }
