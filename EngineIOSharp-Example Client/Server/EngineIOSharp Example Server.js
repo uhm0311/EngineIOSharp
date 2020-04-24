@@ -9,7 +9,7 @@ http.listen(port, function() {
 	
 	server.on('connection', function (socket) {	
         console.log('Client connected!');
-        socket.send(Buffer.from([0, 1, 2, 3, 4, 5]));
+        socket.send(Buffer.from([0, 1, 2, 3, 4, 5, 6]));
 		
 		socket.on('message', function (message) { 
             console.log('Client : ' + message);

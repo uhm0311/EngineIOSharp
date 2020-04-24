@@ -4,8 +4,5 @@
     {
         http,
         https,
-
-        ws,
-        wss,
     }
 }

@@ -1,26 +1,25 @@
 ﻿using EngineIOSharp.Common.Packet;
 using System;
 
-namespace EngineIOSharp.Client
+namespace EngineIOSharp.Server.Client
 {
-    partial class EngineIOClient
+    partial class EngineIOSocket
     {
-        public EngineIOClient OnOpen(Action Callback)
-        {
-            return On(Event.OPEN, Callback);
-        }
-
-        public EngineIOClient OnClose(Action Callback)
+        public EngineIOSocket OnClose(Action Callback)
         {
             return On(Event.CLOSE, Callback);
         }
 
-        public EngineIOClient OnClose(Action<Exception> Callback)
+        public EngineIOSocket OnClose(Action<string, Exception> Callback)
         {
-            return On(Event.CLOSE, (Exception) => Callback(Exception as Exception));
+            return On(Event.CLOSE, (Arguments) =>
+            {
+                object[] Temp = Arguments as object[];
+                Callback(Temp[0] as string, Temp[1] as Exception);
+            });
         }
 
-        public EngineIOClient OnMessage(Action<EngineIOPacket> Callback)
+        public EngineIOSocket OnMessage(Action<EngineIOPacket> Callback)
         {
             return On(Event.MESSAGE, (Packet) => Callback(Packet as EngineIOPacket));
         }
@@ -28,7 +27,7 @@ namespace EngineIOSharp.Client
         public static class Event
         {
             public static readonly string OPEN = "open";
-            public static readonly string HANDSHAKE = "handshake";
+            public static readonly string HEARTBEAT = "heartbeat";
 
             public static readonly string ERROR = "error";
             public static readonly string CLOSE = "close";

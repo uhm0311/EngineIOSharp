@@ -1,27 +1,43 @@
-﻿namespace EngineIOSharp.Example.Server
+﻿using EngineIOSharp.Common;
+using EngineIOSharp.Server;
+using System;
+
+namespace EngineIOSharp.Example.Server
 {
     class Program
     {
         static void Main(string[] args)
         {
-            /*using (EngineIOServer server = new EngineIOServer(1009))
-            {
-                Console.WriteLine("Listening on " + server.Port);
+            //EngineIOLogger.DoWrite = false;
 
-                server.On(EngineIOServerEvent.CONNECTION, (client) =>
+            using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009)))
+            {
+                Console.WriteLine("Listening on " + server.Option.Port);
+
+                server.OnConnection((socket) =>
                 {
                     Console.WriteLine("Client connected!");
 
-                    client.On(EngineIOClientEvent.MESSAGE, (message) =>
+                    socket.OnMessage((packet) =>
                     {
-                        Console.WriteLine("Client : " + message.Data);
-                        client.Send(message.Data);
+                        Console.WriteLine(packet.Data);
+
+                        if (packet.IsText)
+                        {
+                            socket.Send(packet.Data);
+                        }
+                        else
+                        {
+                            socket.Send(packet.RawData);
+                        }
                     });
 
-                    client.On(EngineIOClientEvent.CLOSE, () =>
+                    socket.OnClose(() =>
                     {
                         Console.WriteLine("Client disconnected!");
                     });
+
+                    socket.Send(new byte[] { 0, 1, 2, 3, 4, 5, 6 });
                 });
 
                 server.Start();
@@ -33,7 +49,10 @@
                 {
                     server.Broadcast(line);
                 }
-            }*/
+            }
+
+            Console.WriteLine("Press enter to continue...");
+            Console.Read();
         }
     }
 }

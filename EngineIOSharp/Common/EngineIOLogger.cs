@@ -1,13 +1,13 @@
 ﻿using System;
 using WebSocketSharp;
 
-namespace EngineIOSharp
+namespace EngineIOSharp.Common
 {
     public static class EngineIOLogger
     {
         public static bool DoWrite = true;
 
-        public readonly static Action<LogData, string> WebSocket = (data, message) =>
+        public static Action<LogData, string> WebSocket = (data, message) =>
         {
             if (DoWrite)
             {
@@ -15,7 +15,7 @@ namespace EngineIOSharp
             }
         };
 
-        public readonly static Action<object, Exception> Error = (sender, e) =>
+        public static Action<object, Exception> Error = (sender, e) =>
         {
             if (DoWrite)
             {

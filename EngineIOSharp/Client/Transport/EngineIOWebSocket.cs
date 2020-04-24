@@ -1,23 +1,23 @@
-﻿using EngineIOSharp.Common.Packet;
+﻿using EngineIOSharp.Common;
+using EngineIOSharp.Common.Enum.Internal;
+using EngineIOSharp.Common.Packet;
 using EngineIOSharp.Common.Static;
 using System;
 using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using WebSocketSharp;
+using EngineIOScheme = EngineIOSharp.Common.Enum.Internal.EngineIOScheme;
 
 namespace EngineIOSharp.Client.Transport
 {
     internal class EngineIOWebSocket : EngineIOTransport
     {
-        private readonly Semaphore Semaphore;
-
         private readonly WebSocket WebSocket;
 
         public EngineIOWebSocket(EngineIOClientOption Option) : base(Option)
         {
             StringBuilder URL = new StringBuilder();
-            URL.Append(string.Format("{0}://{1}:{2}{3}", Option.Scheme + 2, Option.Host, Option.Port, Option.Path)).Append('?');
+            URL.Append(string.Format("{0}://{1}:{2}{3}", (EngineIOScheme)(Option.Scheme + 2), Option.Host, Option.Port, Option.Path)).Append('?');
 
             foreach (string Key in new List<string>(Option.Query.Keys))
             {
@@ -37,7 +37,7 @@ namespace EngineIOSharp.Client.Transport
                 CustomHeaders = Option.ExtraHeaders,
             };
 
-            if (Option.WithCredentials)
+            if (Option.WithCredentials && WebSocket.IsSecure)
             {
                 WebSocket.SslConfiguration.ServerCertificateValidationCallback = Option.ServerCertificateValidationCallback;
                 WebSocket.SslConfiguration.ClientCertificateSelectionCallback = Option.ClientCertificateSelectionCallback;
@@ -53,9 +53,6 @@ namespace EngineIOSharp.Client.Transport
             WebSocket.OnMessage += OnWebSocketMessage;
             WebSocket.OnError += OnWebSocketError;
             WebSocket.Log.Output = EngineIOLogger.WebSocket;
-
-            Semaphore = new Semaphore(0, 1);
-            Semaphore.Release();
         }
 
         private void OnWebSocketOpen(object sender, EventArgs e)
@@ -102,8 +99,6 @@ namespace EngineIOSharp.Client.Transport
         private void OnWebSocketError(object sender, ErrorEventArgs e)
         {
             OnError(e.Message, e.Exception);
-
-            Semaphore.Release();
             Writable = false;
         }
 
@@ -125,28 +120,21 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            if (Packet.IsText || Packet.IsBinary)
+            if (Packet != null)
             {
-                Semaphore.WaitOne();
-                Writable = false;
+                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64);
 
-                void Callback(bool _)
+                if (EncodedPacket is string)
                 {
-                    Semaphore.Release();
-                    Emit(Event.FLUSH);
-
-                    Writable = true;
-                    Emit(Event.DRAIN);
+                    WebSocket.Send(EncodedPacket as string);
+                }
+                else if (EncodedPacket is byte[])
+                {
+                    WebSocket.Send(EncodedPacket as byte[]);
                 }
 
-                if (Packet.IsText)
-                {
-                    WebSocket.SendAsync(Packet.Encode() as string, Callback);
-                }
-                else
-                {
-                    WebSocket.SendAsync(Packet.Encode() as byte[], Callback);
-                }
+                Emit(Event.FLUSH);
+                Emit(Event.DRAIN);
             }
         }
     }
