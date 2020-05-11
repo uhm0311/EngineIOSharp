@@ -4,20 +4,20 @@
     <TargetFrameworks Condition="'$(LibraryFrameworks)'==''">net45;net40;netstandard2.0;netcoreapp2.0;netcoreapp3.0</TargetFrameworks>
     <TargetFrameworks Condition="'$(LibraryFrameworks)'!=''">$(LibraryFrameworks)</TargetFrameworks>
     <RootNamespace>EngineIOSharp</RootNamespace>
-      <AssemblyName>EngineIOSharp</AssemblyName>
-      <FileAlignment>512</FileAlignment>
+    <AssemblyName>EngineIOSharp</AssemblyName>
+    <FileAlignment>512</FileAlignment>
     <Authors>uhm0311</Authors>
     <Company>uhm0311</Company>
     <Title>Engine.IO</Title>
     <Copyright>Copyright (c) 2020 uhm0311</Copyright>
-    <Description>C# implementation of Engine.IO protocol client and server.</Description>
+    <Description>C# implementation of Engine.IO protocol revision 3 client and server.</Description>
     <PackageId>EngineIOSharp</PackageId>
-      <PackageTags>Engine.IO;EngineIO</PackageTags>
-      <PackageProjectUrl>https://github.com/uhm0311/EngineIOSharp</PackageProjectUrl>
-      <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageTags>Engine.IO;EngineIO</PackageTags>
+    <PackageProjectUrl>https://github.com/uhm0311/EngineIOSharp</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
-      <RepositoryType>git</RepositoryType>
-      <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
     <PackageIcon>icon.png</PackageIcon>
     <MinClientVersion>2.12</MinClientVersion>
     <PackageVersion>1.0.0</PackageVersion>
@@ -28,9 +28,9 @@
   </PropertyGroup>
   <ItemGroup>
     <None Include="..\icon.png" Pack="true" PackagePath="\" />
-    <PackageReference Include="EmitterSharp" Version="1.1.1" />
+    <PackageReference Include="EmitterSharp" Version="1.1.1.1" />
     <PackageReference Include="Newtonsoft.Json" Version="9.0.1" />
-    <PackageReference Include="SimpleThreadMonitor" Version="1.0.2" />
+    <PackageReference Include="SimpleThreadMonitor" Version="1.0.2.1" />
     <PackageReference Include="WebSocketSharp.CustomHeaders.CustomHttpServer" Version="1.0.2.3" />
   </ItemGroup>
 </Project>
