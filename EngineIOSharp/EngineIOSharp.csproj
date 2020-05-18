@@ -20,8 +20,8 @@
     <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
     <PackageIcon>icon.png</PackageIcon>
     <MinClientVersion>2.12</MinClientVersion>
-    <PackageVersion>1.0.1</PackageVersion>
-    <PackageReleaseNotes>Improve multithreading.</PackageReleaseNotes>
+    <PackageVersion>1.0.2</PackageVersion>
+    <PackageReleaseNotes>Fix bug that is from heartbeat process.</PackageReleaseNotes>
     <PackageOutputPath>../nuget</PackageOutputPath>
     <IncludeSymbols>true</IncludeSymbols>
     <IncludeSource>true</IncludeSource>

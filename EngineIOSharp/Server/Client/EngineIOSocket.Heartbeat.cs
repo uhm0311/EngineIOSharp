@@ -42,7 +42,7 @@ namespace EngineIOSharp.Server.Client
                 {
                     Send(EngineIOPacket.CreatePingPacket());
                     ResetPongTimer(Server.Option.PingTimeout);
-                }, Server.Option.PingInterval);
+                }, Server.Option.PingInterval * 1.1);
             });
         }
 

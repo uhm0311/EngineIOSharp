@@ -285,18 +285,19 @@ namespace EngineIOSharp.Server.Client
             if (ReadyState == EngineIOReadyState.OPEN)
             {
                 Emit(Event.PACKET, Packet);
+
                 ResetPongTimer(Server.Option.PingInterval + Server.Option.PingTimeout);
+                ResetPingTimer();
 
                 switch (Packet.Type)
                 {
                     case EngineIOPacketType.PING:
                         Send(EngineIOPacket.CreatePongPacket(Packet.Data));
+                        Emit(Event.HEARTBEAT);
                         break;
 
                     case EngineIOPacketType.PONG:
                         SimpleMutex.Lock(PongMutex, () => Pong++);
-
-                        ResetPingTimer();
                         Emit(Event.HEARTBEAT);
                         break;
 
