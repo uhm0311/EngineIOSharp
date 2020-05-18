@@ -51,7 +51,7 @@ EngineIOClient client = new EngineIOClient(new EngineIOClientOption(EngineIOSche
     
     - `TimestampRequests` : Whether to add the timestamp with each transport request. Polling requests are always stamped. Defaults to `null`.
     
-    - `TimestampParam` : Timestamp parameter. Defaults to `t`.
+    - `TimestampParam` : Timestamp parameter. Defaults to `"t"`.
     
     - `Polling` : Whether to include polling transport. Defaults to `true`.
     
