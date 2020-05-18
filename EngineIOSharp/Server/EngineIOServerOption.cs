@@ -41,7 +41,7 @@ namespace EngineIOSharp.Server
         /// <param name="Secure">Whether to secure connections.</param>
         /// <param name="PingTimeout">How many ms without a pong packet to consider the connection closed.</param>
         /// <param name="PingInterval">How many ms before sending a new ping packet.</param>
-        /// <param name="UpgradeTimeout">How many ms before an uncompleted transport upgrade is cancelled</param>
+        /// <param name="UpgradeTimeout">How many ms before an uncompleted transport upgrade is cancelled.</param>
         /// <param name="Polling">Whether to accept polling transport.</param>
         /// <param name="WebSocket">Whether to accept websocket transport.</param>
         /// <param name="AllowUpgrade">Whether to allow transport upgrade.</param>
