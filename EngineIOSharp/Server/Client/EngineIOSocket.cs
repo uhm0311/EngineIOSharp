@@ -274,7 +274,7 @@ namespace EngineIOSharp.Server.Client
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    Thread.Sleep(1);
+                    Thread.Sleep(0);
                     SimpleMutex.Lock(BufferMutex, PacketBuffer.Clear);
                 });
             }

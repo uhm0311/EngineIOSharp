@@ -7,6 +7,7 @@ using EngineIOSharp.Common.Static;
 using SimpleThreadMonitor;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 
 namespace EngineIOSharp.Client
 {
@@ -24,6 +25,7 @@ namespace EngineIOSharp.Client
         private readonly object BufferMutex = new object();
         private int PreviousBufferSize = 0;
 
+        private bool Flushing = false;
         private bool Upgrading = false;
 
         public EngineIOClient(EngineIOClientOption Option)
@@ -228,12 +230,23 @@ namespace EngineIOSharp.Client
 
         private void Flush()
         {
-            if (ReadyState != EngineIOReadyState.CLOSED && Transport.Writable && !Upgrading && PacketBuffer.Count > 0)
+            if (ReadyState != EngineIOReadyState.CLOSED && !Upgrading && PacketBuffer.Count > 0 && !Flushing)
             {
-                SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
-                PreviousBufferSize = PacketBuffer.Count;
+                Flushing = true;
 
-                Emit(Event.FLUSH);
+                ThreadPool.QueueUserWorkItem((_) =>
+                {
+                    while (!Transport.Writable)
+                    {
+                        Thread.Sleep(0);
+                    }
+
+                    SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
+                    PreviousBufferSize = PacketBuffer.Count;
+
+                    Emit(Event.FLUSH);
+                    Flushing = false;
+                });
             }
         }
 
