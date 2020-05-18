@@ -43,7 +43,12 @@ namespace EngineIOSharp.Server.Client
             OnOpen();
         }
 
-        public void Close(bool Discard)
+        public void Close()
+        {
+            Close(true);
+        }
+
+        internal void Close(bool Discard)
         {
             if (ReadyState == EngineIOReadyState.OPEN)
             {
