@@ -104,9 +104,14 @@ client.OnMessage((Packet) =>
   Console.WriteLine("Server : " + Packet.Data);
 });
 
-client.OnClose(() =>
+client.OnClose((Exception Description) =>
 {
   Console.WriteLine("Disconnected!");
+  
+  if (Description != null)
+  {
+    Console.WriteLine(Description);
+  }
 });
 
 client.On(EngineIOClient.Event.FLUSH, () =>
