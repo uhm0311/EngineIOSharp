@@ -40,6 +40,7 @@ namespace EngineIOSharp.Client
         /// <summary>
         /// Options for Engine.IO client.
         /// </summary>
+        /// <param name="Scheme">Scheme to connect to.</param>
         /// <param name="Host">Host to connect to.</param>
         /// <param name="Port">Port to connect to.</param>
         /// <param name="PolicyPort">Port the policy server listens on.</param>
@@ -50,7 +51,7 @@ namespace EngineIOSharp.Client
         /// <param name="ForceBase64">Forces base 64 encoding for transport.</param>
         /// <param name="WithCredentials">Whether to include credentials such as cookies, authorization headers, TLS client certificates, etc. with polling requests.</param>
         /// <param name="TimestampRequests">Whether to add the timestamp with each transport request. Polling requests are always stamped.</param>
-        /// <param name="TimestampParam">Timestamp parameter</param>
+        /// <param name="TimestampParam">Timestamp parameter.</param>
         /// <param name="Polling">Whether to include polling transport.</param>
         /// <param name="PollingTimeout">Timeout for polling requests in milliseconds.</param>
         /// <param name="WebSocket">Whether to include websocket transport.</param>
