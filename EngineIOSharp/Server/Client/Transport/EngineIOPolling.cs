@@ -96,49 +96,56 @@ namespace EngineIOSharp.Server.Client.Transport
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    bool DoClose = ShouldClose != null;
-                    Semaphore.WaitOne();
-
-                    if (DoClose)
+                    try
                     {
-                        ShouldClose();
-                        ShouldClose = null;
-                    }
+                        bool DoClose = ShouldClose != null;
+                        Semaphore.WaitOne();
 
-                    bool HasBinary = false;
-
-                    if (!ForceBase64)
-                    {
-                        foreach (EngineIOPacket Packet in Packets)
+                        if (DoClose)
                         {
-                            if (HasBinary = Packet.IsBinary)
+                            ShouldClose();
+                            ShouldClose = null;
+                        }
+
+                        bool HasBinary = false;
+
+                        if (!ForceBase64)
+                        {
+                            foreach (EngineIOPacket Packet in Packets)
                             {
-                                break;
+                                if (HasBinary = Packet.IsBinary)
+                                {
+                                    break;
+                                }
                             }
                         }
-                    }
 
-                    if (HasBinary)
-                    {
-                        List<byte> EncodedPacktes = new List<byte>();
-
-                        foreach (EngineIOPacket Packet in Packets)
+                        if (HasBinary)
                         {
-                            EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
+                            List<byte> EncodedPacktes = new List<byte>();
+
+                            foreach (EngineIOPacket Packet in Packets)
+                            {
+                                EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
+                            }
+
+                            Send(EncodedPacktes.ToArray());
                         }
-
-                        Send(EncodedPacktes.ToArray());
-                    }
-                    else
-                    {
-                        StringBuilder EncodedPackets = new StringBuilder();
-
-                        foreach (EngineIOPacket Packet in Packets)
+                        else
                         {
-                            EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
-                        }
+                            StringBuilder EncodedPackets = new StringBuilder();
 
-                        Send(EncodedPackets.ToString());
+                            foreach (EngineIOPacket Packet in Packets)
+                            {
+                                EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
+                            }
+
+                            Send(EncodedPackets.ToString());
+                        }
+                    }
+                    catch (Exception Exception)
+                    {
+                        OnError("Polling not sent.", Exception);
                     }
                 });
             }
