@@ -84,26 +84,33 @@ namespace EngineIOSharp.Server.Client.Transport
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    Semaphore.WaitOne();
-
-                    foreach (EngineIOPacket Packet in Packets)
+                    try
                     {
-                        object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, ForceBase64);
+                        Semaphore.WaitOne();
 
-                        if (EncodedPacket is string)
+                        foreach (EngineIOPacket Packet in Packets)
                         {
-                            Client.Send(EncodedPacket as string);
+                            object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, ForceBase64);
+
+                            if (EncodedPacket is string)
+                            {
+                                Client.Send(EncodedPacket as string);
+                            }
+                            else if (EncodedPacket is byte[])
+                            {
+                                Client.Send(EncodedPacket as byte[]);
+                            }
                         }
-                        else if (EncodedPacket is byte[])
-                        {
-                            Client.Send(EncodedPacket as byte[]);
-                        }
+
+                        Semaphore.Release();
+                        Writable = true;
+
+                        Emit(Event.DRAIN);
                     }
-
-                    Semaphore.Release();
-                    Writable = true;
-
-                    Emit(Event.DRAIN);
+                    catch (Exception Exception)
+                    {
+                        OnError("WebSocket not sent.", Exception);
+                    }
                 });
             }
 

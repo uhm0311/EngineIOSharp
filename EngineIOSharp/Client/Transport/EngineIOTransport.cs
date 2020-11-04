@@ -31,10 +31,17 @@ namespace EngineIOSharp.Client.Transport
         {
             ThreadPool.QueueUserWorkItem((_) => 
             {
-                if (ReadyState == EngineIOReadyState.CLOSED)
+                try
                 {
-                    ReadyState = EngineIOReadyState.OPENING;
-                    OpenInternal();
+                    if (ReadyState == EngineIOReadyState.CLOSED)
+                    {
+                        ReadyState = EngineIOReadyState.OPENING;
+                        OpenInternal();
+                    }
+                }
+                catch (Exception Exception)
+                {
+                    OnError("Transport not opned normally.", Exception);
                 }
             });
 
@@ -45,10 +52,17 @@ namespace EngineIOSharp.Client.Transport
         {
             ThreadPool.QueueUserWorkItem((_) =>
             {
-                if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
+                try
                 {
-                    CloseInternal();
-                    OnClose();
+                    if (ReadyState == EngineIOReadyState.OPENING || ReadyState == EngineIOReadyState.OPEN)
+                    {
+                        CloseInternal();
+                        OnClose();
+                    }
+                }
+                catch (Exception Exception)
+                {
+                    OnError("Transport not closed normally.", Exception);
                 }
             });
 
@@ -63,29 +77,36 @@ namespace EngineIOSharp.Client.Transport
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    Semaphore.WaitOne();
-
-                    if (ReadyState == EngineIOReadyState.OPEN)
+                    try
                     {
-                        try
+                        Semaphore.WaitOne();
+
+                        if (ReadyState == EngineIOReadyState.OPEN)
                         {
-                            foreach (EngineIOPacket Packet in Packets)
+                            try
                             {
-                                SendInternal(Packet);
+                                foreach (EngineIOPacket Packet in Packets)
+                                {
+                                    SendInternal(Packet);
+                                }
+                            }
+                            catch (Exception Exception)
+                            {
+                                EngineIOLogger.Error(this, Exception);
                             }
                         }
-                        catch (Exception Exception)
+                        else
                         {
-                            EngineIOLogger.Error(this, Exception);
+                            EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
                         }
-                    }
-                    else
-                    {
-                        EngineIOLogger.Error(this, new EngineIOException("Transport is not opened. ReadyState : " + ReadyState));
-                    }
 
-                    Semaphore.Release();
-                    Writable = true;
+                        Semaphore.Release();
+                        Writable = true;
+                    }
+                    catch (Exception Exception)
+                    {
+                        OnError("Transport not sent.", Exception);
+                    }
                 });
             }
 

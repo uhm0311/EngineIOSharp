@@ -236,16 +236,23 @@ namespace EngineIOSharp.Client
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
-                    while (!Transport.Writable)
+                    try
                     {
-                        Thread.Sleep(0);
+                        while (!Transport.Writable)
+                        {
+                            Thread.Sleep(0);
+                        }
+
+                        SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
+                        PreviousBufferSize = PacketBuffer.Count;
+
+                        Emit(Event.FLUSH);
+                        Flushing = false;
                     }
-
-                    SimpleMutex.Lock(BufferMutex, () => Transport.Send(PacketBuffer.ToArray()));
-                    PreviousBufferSize = PacketBuffer.Count;
-
-                    Emit(Event.FLUSH);
-                    Flushing = false;
+                    catch (Exception Exception)
+                    {
+                        OnError(Exception);
+                    }
                 });
             }
         }
