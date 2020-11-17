@@ -20,8 +20,8 @@
     <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
     <PackageIcon>icon.png</PackageIcon>
     <MinClientVersion>2.12</MinClientVersion>
-    <PackageVersion>1.0.3</PackageVersion>
-    <PackageReleaseNotes>Try-catch inside of ThreadPool.QueueUserWorkItem.</PackageReleaseNotes>
+    <PackageVersion>1.0.4</PackageVersion>
+    <PackageReleaseNotes>Fix NPE.</PackageReleaseNotes>
     <PackageOutputPath>../nuget</PackageOutputPath>
     <IncludeSymbols>true</IncludeSymbols>
     <IncludeSource>true</IncludeSource>
