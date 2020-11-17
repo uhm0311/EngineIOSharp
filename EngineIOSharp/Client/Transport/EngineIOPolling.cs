@@ -97,7 +97,10 @@ namespace EngineIOSharp.Client.Transport
 
         protected override void SendInternal(EngineIOPacket Packet)
         {
-            Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64), (Exception) => OnError("Post error", Exception));
+            if (Packet != null)
+            {
+                Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64), (Exception) => OnError("Post error", Exception));
+            }
         }
 
         private void Request(EngineIOHttpMethod Method = EngineIOHttpMethod.GET, object EncodedPacket = null, Action<Exception> ErrorCallback = null)
