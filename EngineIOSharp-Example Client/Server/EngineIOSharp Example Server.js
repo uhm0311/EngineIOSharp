@@ -1,6 +1,8 @@
 var engine = require('engine.io');
 var http = require('http').createServer();
-var server = engine.attach(http);
+var server = engine.attach(http, {
+	allowUpgrades: true
+});
 
 var port = 1009;
 
@@ -14,7 +16,8 @@ http.listen(port, function() {
 		socket.on('message', function (message) { 
             console.log('Client : ' + message);
 
-            socket.send(message);
+			socket.send(message);
+			socket.send(message);
 		});
 		
 		socket.on('close', function(e, d) { 
