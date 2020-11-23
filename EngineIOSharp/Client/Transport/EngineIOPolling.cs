@@ -283,7 +283,7 @@ namespace EngineIOSharp.Client.Transport
 
                                 if (ReadyState == EngineIOReadyState.OPEN)
                                 {
-                                    Poll();
+                                    ThreadPool.QueueUserWorkItem((_) => Poll());
                                 }
                             }
                         }
