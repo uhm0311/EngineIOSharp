@@ -14,13 +14,13 @@ namespace EngineIOSharp.Server.Client
     {
         public string SID { get; private set; }
         public EngineIOServer Server { get; private set; }
+        public int Protocol { get; private set; }
 
         internal bool Upgrading { get; private set; }
         public bool Upgraded { get; private set; }
 
         public EngineIOReadyState ReadyState { get; private set; }
         internal EngineIOTransport Transport { get; private set; }
-        private int Protocol { get; set; }
 
         private readonly Queue<EngineIOPacket> PacketBuffer = new Queue<EngineIOPacket>();
         private readonly object BufferMutex = new object();
@@ -34,6 +34,7 @@ namespace EngineIOSharp.Server.Client
         {
             this.SID = SID;
             this.Server = Server;
+            this.Protocol = Protocol;
 
             Upgrading = false;
             Upgraded = false;
@@ -41,7 +42,6 @@ namespace EngineIOSharp.Server.Client
             ReadyState = EngineIOReadyState.OPENING;
 
             SetTransport(Transport);
-            this.Protocol = Protocol;
             OnOpen();
         }
 

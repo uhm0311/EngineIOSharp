@@ -61,6 +61,10 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Client\3\package-lock.json" />
+    <None Include="Client\3\package.json" />
+    <None Include="Client\4\package-lock.json" />
+    <None Include="Client\4\package.json" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
@@ -70,7 +74,8 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Client\EngineIOSharp Example Client.js" />
+    <Content Include="Client\3\EngineIOSharp Example Client.js" />
+    <Content Include="Client\4\EngineIOSharp Example Client.js" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
