@@ -104,7 +104,7 @@ namespace EngineIOSharp.Server
             {
                 if (EngineIOHttpManager.IsWebSocket(TransportName))
                 {
-                    Handshake(Context.QueryString["sid"] ?? EngineIOSocketID.Generate(), new EngineIOWebSocket(Context));
+                    Handshake(Context.QueryString["sid"] ?? EngineIOSocketID.Generate(), new EngineIOWebSocket(Context), Context.QueryString["EIO"] == "4" ? 4 : 3);
                 }
                 else
                 {

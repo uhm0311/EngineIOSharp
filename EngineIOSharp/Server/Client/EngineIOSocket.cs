@@ -20,6 +20,7 @@ namespace EngineIOSharp.Server.Client
 
         public EngineIOReadyState ReadyState { get; private set; }
         internal EngineIOTransport Transport { get; private set; }
+        private int Protocol { get; set; }
 
         private readonly Queue<EngineIOPacket> PacketBuffer = new Queue<EngineIOPacket>();
         private readonly object BufferMutex = new object();
@@ -29,7 +30,7 @@ namespace EngineIOSharp.Server.Client
         private readonly Queue<Action> PacketCallback = new Queue<Action>();
         private readonly Queue<Queue<Action>> SentCallback = new Queue<Queue<Action>>();
 
-        internal EngineIOSocket(string SID, EngineIOServer Server, EngineIOTransport Transport)
+        internal EngineIOSocket(string SID, EngineIOServer Server, EngineIOTransport Transport, int Protocol)
         {
             this.SID = SID;
             this.Server = Server;
@@ -40,6 +41,7 @@ namespace EngineIOSharp.Server.Client
             ReadyState = EngineIOReadyState.OPENING;
 
             SetTransport(Transport);
+            this.Protocol = Protocol;
             OnOpen();
         }
 
@@ -89,9 +91,7 @@ namespace EngineIOSharp.Server.Client
                 .Once(EngineIOTransport.Event.ERROR, (Exception) => OnError(Exception as Exception))
                 .Once(EngineIOTransport.Event.CLOSE, (Argument) =>
                 {
-                    object[] Temp = Argument as object[];
-
-                    if (Temp != null)
+                    if (Argument is object[] Temp)
                     {
                         OnClose(Temp[0] as string, Temp[1] as Exception);
                     }
@@ -131,7 +131,7 @@ namespace EngineIOSharp.Server.Client
 
                         Emit(Event.UPGRADE);
 
-                        ResetPingTimer();
+                        ResetEIO3PingTimer();
                         Flush();
 
                         if (ReadyState == EngineIOReadyState.CLOSING)
@@ -205,7 +205,7 @@ namespace EngineIOSharp.Server.Client
             }
 
             Transport.Close();
-            StopPingTimer();
+            StopEIO3PingTimer();
         }
 
         private void Flush()
@@ -256,7 +256,9 @@ namespace EngineIOSharp.Server.Client
             }
 
             Emit(Event.OPEN);
-            ResetPingTimer();
+
+            StartEIO4Heartbeat();
+            ResetEIO3PingTimer();
         }
 
         private void OnClose(string Message, Exception Description = null)
@@ -264,7 +266,10 @@ namespace EngineIOSharp.Server.Client
             if (ReadyState != EngineIOReadyState.CLOSED)
             {
                 ReadyState = EngineIOReadyState.CLOSED;
-                StopTimers();
+
+                StopEIO4Heartbeat();
+                StopEIO3Hertbeat();
+                StopCheckUpgradeTimers();
 
                 PacketCallback.Clear();
                 SentCallback.Clear();
@@ -286,19 +291,35 @@ namespace EngineIOSharp.Server.Client
             {
                 Emit(Event.PACKET, Packet);
 
-                ResetPongTimer(Server.Option.PingInterval + Server.Option.PingTimeout);
-                ResetPingTimer();
+                ResetEIO3PongTimer(Server.Option.PingInterval + Server.Option.PingTimeout);
+                ResetEIO3PingTimer();
 
                 switch (Packet.Type)
                 {
                     case EngineIOPacketType.PING:
-                        Send(EngineIOPacket.CreatePongPacket(Packet.Data));
-                        Emit(Event.HEARTBEAT);
+                        if (Protocol == 3)
+                        {
+                            Send(EngineIOPacket.CreatePongPacket(Packet.Data));
+                            Emit(Event.HEARTBEAT);
+                        }
+                        else
+                        {
+                            OnError(new EngineIOException("Invalid heartbeat direction."));
+                        }
+
                         break;
 
                     case EngineIOPacketType.PONG:
-                        SimpleMutex.Lock(PongMutex, () => Pong++);
-                        Emit(Event.HEARTBEAT);
+                        if (Protocol != 3)
+                        {
+                            SimpleMutex.Lock(PongMutex, () => Pong++);
+                            Emit(Event.HEARTBEAT);
+                        }
+                        else
+                        {
+                            OnError(new EngineIOException("Invalid heartbeat direction."));
+                        }
+
                         break;
 
                     case EngineIOPacketType.MESSAGE:

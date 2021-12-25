@@ -73,7 +73,11 @@ namespace EngineIOSharp.Server
         {
             EngineIOException Exception = Exceptions.UNKNOWN_TRANSPORT;
 
-            if (EngineIOHttpManager.GetTransport(QueryString).Equals(ExpectedTransportType.ToString()))
+            if (QueryString["EIO"] == "3" && !Option.AllowEIO3)
+            {
+                Exception = Exceptions.UNSUPPORTED_PROTOCOL_VERSION;
+            }
+            else if (EngineIOHttpManager.GetTransport(QueryString).Equals(ExpectedTransportType.ToString()))
             {
                 bool IsPolling = EngineIOHttpManager.IsPolling(QueryString) && Option.Polling;
                 bool IsWebSocket = EngineIOHttpManager.IsWebSocket(QueryString) && Option.WebSocket;
@@ -94,7 +98,7 @@ namespace EngineIOSharp.Server
             return Exception;
         }
 
-        private void Handshake(string SID, EngineIOTransport Transport)
+        private void Handshake(string SID, EngineIOTransport Transport, int Protocol)
         {
             if (Option.SetCookie)
             {
@@ -119,7 +123,7 @@ namespace EngineIOSharp.Server
                 });
             }
 
-            EngineIOSocket Socket = new EngineIOSocket(SID, this, Transport);
+            EngineIOSocket Socket = new EngineIOSocket(SID, this, Transport, Protocol);
             _Clients.TryAdd(SID, Socket.Once(EngineIOSocket.Event.CLOSE, () => _Clients.TryRemove(SID, out _)));
 
             Emit(Event.CONNECTION, Socket);

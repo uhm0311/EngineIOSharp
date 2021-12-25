@@ -1,10 +1,11 @@
-var engine = require('engine.io');
-var http = require('http').createServer();
-var server = engine.attach(http, {
-	allowUpgrades: true
+const engine = require('engine.io');
+const http = require('http').createServer();
+const server = engine.attach(http, {
+	allowUpgrades: true,
+	allowEIO3: true
 });
 
-var port = 1009;
+const port = 1009;
 
 http.listen(port, function() {
 	console.log('Listening on ' + port);
