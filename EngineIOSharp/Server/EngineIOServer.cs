@@ -98,7 +98,7 @@ namespace EngineIOSharp.Server
             return Exception;
         }
 
-        private void Handshake(string SID, EngineIOTransport Transport, int Protocol)
+        private void Handshake(string SID, EngineIOTransport Transport)
         {
             if (Option.SetCookie)
             {
@@ -123,8 +123,11 @@ namespace EngineIOSharp.Server
                 });
             }
 
-            EngineIOSocket Socket = new EngineIOSocket(SID, this, Transport, Protocol);
-            _Clients.TryAdd(SID, Socket.Once(EngineIOSocket.Event.CLOSE, () => _Clients.TryRemove(SID, out _)));
+            EngineIOSocket Socket = new EngineIOSocket(SID, this, Transport);
+            _Clients.TryAdd(SID, Socket.Once(EngineIOSocket.Event.CLOSE, () =>
+            {
+                _Clients.TryRemove(SID, out _);
+            }));
 
             Emit(Event.CONNECTION, Socket);
         }

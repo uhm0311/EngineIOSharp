@@ -13,7 +13,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StopEIO3Hertbeat()
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 StopEIO3PingTimer();
                 StopEIO3PongTimer();
@@ -22,7 +22,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StartEIO3PingTimer()
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 SimpleMutex.Lock(PingMutex, () =>
                 {
@@ -37,7 +37,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StopEIO3PingTimer()
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 SimpleMutex.Lock(PingMutex, () => EIO3PingTimer?.Stop());
             }
@@ -45,7 +45,7 @@ namespace EngineIOSharp.Server.Client
 
         private void ResetEIO3PingTimer()
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 StopEIO3PingTimer();
                 StartEIO3PingTimer();
@@ -54,7 +54,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StartEIO3PongTimer(ulong PingTimeout)
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 SimpleMutex.Lock(PongMutex, () =>
                 {
@@ -82,7 +82,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StopEIO3PongTimer()
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 SimpleMutex.Lock(PongMutex, () => EIO3PongTimer?.Stop());
             }
@@ -90,7 +90,7 @@ namespace EngineIOSharp.Server.Client
 
         private void ResetEIO3PongTimer(ulong PingTimeout)
         {
-            if (Protocol == 3)
+            if (Transport.Protocol == 3)
             {
                 StopEIO3PongTimer();
                 StartEIO3PongTimer(PingTimeout);

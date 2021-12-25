@@ -42,17 +42,16 @@ namespace EngineIOSharp.Server
                 if ((Return = Verify(Context.QueryString, Context.Headers, EngineIOTransportType.websocket)) == null)
                 {
                     string SID = EngineIOHttpManager.GetSID(Context.QueryString);
-                    bool Contains = _Clients.ContainsKey(SID);
 
                     if (!string.IsNullOrEmpty(SID))
                     {
-                        if (Contains && _Clients.TryGetValue(SID, out EngineIOSocket Socket))
+                        if (_Clients.TryGetValue(SID, out EngineIOSocket Socket))
                         {
                             if (Socket.Transport is EngineIOPolling && Option.AllowUpgrade && Option.WebSocket && !(Socket.Upgrading || Socket.Upgraded))
                             {
                                 if (!(Socket.Upgrading || Socket.Upgraded))
                                 {
-                                    Socket.UpgradeTransport(new EngineIOWebSocket(Context));
+                                    Socket.UpgradeTransport(new EngineIOWebSocket(Context, EngineIOHttpManager.GetProtocol(Context.QueryString)));
                                     AllowWebSocket = true;
                                 }
                                 else
@@ -104,7 +103,7 @@ namespace EngineIOSharp.Server
             {
                 if (EngineIOHttpManager.IsWebSocket(TransportName))
                 {
-                    Handshake(Context.QueryString["sid"] ?? EngineIOSocketID.Generate(), new EngineIOWebSocket(Context), Context.QueryString["EIO"] == "4" ? 4 : 3);
+                    Handshake(Context.QueryString["sid"] ?? EngineIOSocketID.Generate(), new EngineIOWebSocket(Context, EngineIOHttpManager.GetProtocol(Context.QueryString)));
                 }
                 else
                 {

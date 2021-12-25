@@ -28,7 +28,7 @@ namespace EngineIOSharp.Server.Client.Transport
         private Action ShouldClose;
         private EngineIOTimeout CloseTimer;
 
-        public EngineIOPolling(HttpListenerRequest Request)
+        public EngineIOPolling(HttpListenerRequest Request, int Protocol) : base(Protocol)
         {
             Origin = EngineIOHttpManager.GetOrigin(Request.Headers);
             ForceBase64 = int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
@@ -72,7 +72,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
             if (Writable)
             {
-                Send(EngineIOPacket.CreateClosePacket().Encode(EngineIOTransportType.polling, ForceBase64));
+                Send(EngineIOPacket.CreateClosePacket().Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol));
                 OnClose();
             }
             else if (Discarded)
@@ -126,7 +126,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                             foreach (EngineIOPacket Packet in Packets)
                             {
-                                EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
+                                EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true, Protocol: Protocol) as byte[]);
                             }
 
                             Send(EncodedPacktes.ToArray());
@@ -137,7 +137,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                             foreach (EngineIOPacket Packet in Packets)
                             {
-                                EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
+                                EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true, Protocol: Protocol));
                             }
 
                             Send(EncodedPackets.ToString());
@@ -287,7 +287,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     if (Writable && ShouldClose != null)
                     {
-                        Send(EngineIOPacket.CreateNoopPacket().Encode(EngineIOTransportType.polling, ForceBase64), OnPollRequestClose);
+                        Send(EngineIOPacket.CreateNoopPacket().Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol), OnPollRequestClose);
                     }
                 }
                 else
@@ -316,7 +316,7 @@ namespace EngineIOSharp.Server.Client.Transport
                 {
                     if (DataRequest == null)
                     {
-                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request);
+                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request, Protocol);
                         Response.Headers = SetHeaders(Response.Headers);
 
                         using (Response.OutputStream)

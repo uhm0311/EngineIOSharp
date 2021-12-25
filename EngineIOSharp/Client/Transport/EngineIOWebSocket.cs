@@ -122,7 +122,7 @@ namespace EngineIOSharp.Client.Transport
         {
             if (Packet != null)
             {
-                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64);
+                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64, Protocol: Protocol);
 
                 if (EncodedPacket is string)
                 {

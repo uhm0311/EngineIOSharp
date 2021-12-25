@@ -99,7 +99,7 @@ namespace EngineIOSharp.Client.Transport
         {
             if (Packet != null)
             {
-                Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64), (Exception) => OnError("Post error", Exception));
+                Request(EngineIOHttpMethod.POST, Packet.Encode(EngineIOTransportType.polling, Option.ForceBase64, Protocol: Protocol), (Exception) => OnError("Post error", Exception));
             }
         }
 
@@ -250,7 +250,7 @@ namespace EngineIOSharp.Client.Transport
 
                     if (Method == EngineIOHttpMethod.GET)
                     {
-                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Response);
+                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Response, Protocol);
 
                         if ((Packets?.Length ?? 0) > 0)
                         {

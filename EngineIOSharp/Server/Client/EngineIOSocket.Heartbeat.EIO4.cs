@@ -11,7 +11,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StartEIO4Heartbeat()
         {
-            if (Protocol == 4)
+            if (Transport.Protocol == 4)
             {
                 SimpleMutex.Lock(PingMutex, () =>
                 {
@@ -64,7 +64,7 @@ namespace EngineIOSharp.Server.Client
 
         private void StopEIO4Heartbeat()
         {
-            if (Protocol == 4)
+            if (Transport.Protocol == 4)
             {
                 SimpleMutex.Lock(PingMutex, () =>
                 {

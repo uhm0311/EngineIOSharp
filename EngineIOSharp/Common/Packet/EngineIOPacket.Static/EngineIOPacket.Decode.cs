@@ -10,6 +10,8 @@ namespace EngineIOSharp.Common.Packet
 {
     partial class EngineIOPacket
     {
+        private static readonly string Seperator = "\u001e";
+
         internal static EngineIOPacket Decode(string Data)
         {
             try
@@ -65,13 +67,24 @@ namespace EngineIOSharp.Common.Packet
             }
         }
 
-        internal static EngineIOPacket[] Decode(HttpWebResponse Response)
+        internal static EngineIOPacket[] Decode(HttpWebResponse Response, int Protocol)
         {
             if (Response != null)
             {
                 if (Response.StatusCode == HttpStatusCode.OK)
                 {
-                    return Decode(Response.GetResponseStream());
+                    if (Protocol == 3)
+                    {
+                        return DecodeEIO3(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
+                    }
+                    else if (Protocol == 4)
+                    {
+                        return DecodeEIO4(Response.GetResponseStream());
+                    }
+                    else
+                    {
+                        throw CreateProtocolException(Protocol);
+                    }
                 }
                 else
                 {
@@ -82,64 +95,28 @@ namespace EngineIOSharp.Common.Packet
             return new EngineIOPacket[0];
         }
 
-        internal static EngineIOPacket[] Decode(HttpListenerRequest Request)
+        internal static EngineIOPacket[] Decode(HttpListenerRequest Request, int Protocol)
         {
             if (Request != null)
             {
-                return Decode(Request.InputStream);
+                if (Protocol == 3)
+                {
+                    return DecodeEIO3(Request.InputStream, Request.ContentType.Equals("application/octet-stream"));
+                }
+                else if (Protocol == 4)
+                {
+                    return DecodeEIO4(Request.InputStream);
+                }
+                else
+                {
+                    throw CreateProtocolException(Protocol);
+                }
             }
 
             return new EngineIOPacket[0];
         }
 
-        private static readonly string Seperator = "\u001e";
-
-        private static EngineIOPacket[] Decode(Stream Stream)
-        {
-            List<EngineIOPacket> Result = new List<EngineIOPacket>();
-            object Temp = string.Empty;
-
-            try
-            {
-                using (StreamReader Reader = new StreamReader(Stream))
-                {
-                    string Content = (Temp = Reader.ReadToEnd()).ToString();
-                    Queue<string> Contents = new Queue<string>();
-
-                    while (Content.Contains(Seperator))
-                    {
-                        Contents.Enqueue(Content.Substring(0, Content.IndexOf(Seperator)));
-                        Content = Content.Substring(Content.IndexOf(Seperator) + Seperator.Length);
-                    }
-
-                    Contents.Enqueue(Content);
-
-                    while (Contents.Count > 0)
-                    {
-                        string Data = Contents.Dequeue();
-
-                        if (Data.StartsWith("b"))
-                        {
-                            Result.Add(DecodeBase64String(Data));
-                        }
-                        else
-                        {
-                            Result.Add(Decode(Data));
-                        }
-                    }
-                }
-            }
-            catch (Exception Exception)
-            {
-                EngineIOLogger.Error("Packet decoding failed. " + Temp, Exception);
-
-                Result.Add(CreateErrorPacket(Exception));
-            }
-
-            return Result.ToArray();
-        }
-
-        internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
+        internal static EngineIOPacket Decode(MessageEventArgs EventArgs, int Protocol)
         {
             if (EventArgs.IsText)
             {
@@ -147,7 +124,7 @@ namespace EngineIOSharp.Common.Packet
 
                 if (Data.StartsWith("b"))
                 {
-                    return DecodeBase64String(Data);
+                    return DecodeBase64String(Data, Protocol);
                 }
                 else
                 {
@@ -164,12 +141,30 @@ namespace EngineIOSharp.Common.Packet
             }
         }
 
-        private static EngineIOPacket DecodeBase64String(string Data)
+        private static EngineIOPacket DecodeBase64String(string Data, int Protocol)
         {
-            List<byte> RawBuffer = new List<byte>() { (byte)EngineIOPacketType.MESSAGE };
+            return Decode(ConvertBase64StringToByteBuffer(Data, Protocol).ToArray());
+        }
 
-            RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(1)));
-            return Decode(RawBuffer.ToArray());
+        private static List<byte> ConvertBase64StringToByteBuffer(string Data, int Protocol)
+        {
+            if (Protocol == 3)
+            {
+                return ConvertBase64StringToRawBufferEIO3(Data);
+            }
+            else if (Protocol == 4)
+            {
+                return ConvertBase64StringToRawBufferEIO4(Data);
+            }
+            else
+            {
+                throw CreateProtocolException(Protocol);
+            }
+        }
+
+        private static Exception CreateProtocolException(int Protocol)
+        {
+            return new ArgumentException(string.Format("Invalid Protocol {0}", Protocol), "Protocol");
         }
     }
 }

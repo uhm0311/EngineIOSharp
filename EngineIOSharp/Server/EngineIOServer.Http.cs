@@ -96,10 +96,10 @@ namespace EngineIOSharp.Server
             {
                 if (EngineIOHttpManager.IsPolling(TransportName))
                 {
-                    EngineIOTransport Transport = new EngineIOPolling(Request);
+                    EngineIOTransport Transport = new EngineIOPolling(Request, EngineIOHttpManager.GetProtocol(Request.QueryString));
                     Transport.OnRequest(Request, Response);
 
-                    Handshake(EngineIOSocketID.Generate(), Transport, Request.QueryString["EIO"] == "4" ? 4 : 3);
+                    Handshake(EngineIOSocketID.Generate(), Transport);
                 }
                 else
                 {

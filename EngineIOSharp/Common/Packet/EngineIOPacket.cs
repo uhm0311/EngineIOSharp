@@ -1,7 +1,5 @@
-﻿using EngineIOSharp.Client.Transport;
-using EngineIOSharp.Common.Enum.Internal;
+﻿using EngineIOSharp.Common.Enum.Internal;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace EngineIOSharp.Common.Packet
@@ -44,39 +42,19 @@ namespace EngineIOSharp.Common.Packet
             return Builder.ToString();
         }
 
-        internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false)
+        internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false, int Protocol = 3)
         {
-            if (ForceBase64 && ForceBinary)
+            if (Protocol == 3)
             {
-                throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
+                return EncodeEIO3(TransportType, ForceBase64, ForceBinary);
             }
-
-            try
+            else if (Protocol == 4)
             {
-                if (IsText || IsBinary)
-                {
-                    if ((TransportType == EngineIOTransportType.polling) || (!ForceBinary && (IsText || ForceBase64)))
-                    {
-                        StringBuilder Builder = new StringBuilder();
-                        Builder.Append(IsText ? ((int)Type).ToString() : "b");
-                        Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
-
-                        return Builder.ToString();
-                    }
-                    else
-                    {
-                        List<byte> Buffer = new List<byte>() { (byte)Type };
-                        Buffer.AddRange(RawData);
-
-                        return Buffer.ToArray();
-                    }
-                }
-
-                throw new EngineIOException("Packet encoding failed. " + this);
+                return EncodeEIO4(TransportType, ForceBase64, ForceBinary);
             }
-            catch (Exception Exception)
+            else
             {
-                return CreateErrorPacket(Exception);
+                throw CreateProtocolException(Protocol);
             }
         }
     }

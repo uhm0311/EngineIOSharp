@@ -14,7 +14,6 @@ namespace EngineIOSharp.Server.Client
     {
         public string SID { get; private set; }
         public EngineIOServer Server { get; private set; }
-        public int Protocol { get; private set; }
 
         internal bool Upgrading { get; private set; }
         public bool Upgraded { get; private set; }
@@ -30,11 +29,10 @@ namespace EngineIOSharp.Server.Client
         private readonly Queue<Action> PacketCallback = new Queue<Action>();
         private readonly Queue<Queue<Action>> SentCallback = new Queue<Queue<Action>>();
 
-        internal EngineIOSocket(string SID, EngineIOServer Server, EngineIOTransport Transport, int Protocol)
+        internal EngineIOSocket(string SID, EngineIOServer Server, EngineIOTransport Transport)
         {
             this.SID = SID;
             this.Server = Server;
-            this.Protocol = Protocol;
 
             Upgrading = false;
             Upgraded = false;
@@ -297,7 +295,7 @@ namespace EngineIOSharp.Server.Client
                 switch (Packet.Type)
                 {
                     case EngineIOPacketType.PING:
-                        if (Protocol == 3)
+                        if (Transport.Protocol == 3)
                         {
                             Send(EngineIOPacket.CreatePongPacket(Packet.Data));
                             Emit(Event.HEARTBEAT);
@@ -310,7 +308,7 @@ namespace EngineIOSharp.Server.Client
                         break;
 
                     case EngineIOPacketType.PONG:
-                        if (Protocol != 3)
+                        if (Transport.Protocol != 3)
                         {
                             SimpleMutex.Lock(PongMutex, () => Pong++);
                             Emit(Event.HEARTBEAT);

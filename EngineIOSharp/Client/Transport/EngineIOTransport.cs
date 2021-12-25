@@ -17,6 +17,8 @@ namespace EngineIOSharp.Client.Transport
         public EngineIOReadyState ReadyState { get; protected set; }
         public bool Writable { get; protected set; }
 
+        public const int Protocol = 4;
+
         protected EngineIOTransport(EngineIOClientOption Option)
         {
             this.Option = Option;
