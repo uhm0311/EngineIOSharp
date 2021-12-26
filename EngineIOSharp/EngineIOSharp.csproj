@@ -20,7 +20,7 @@
     <RepositoryUrl>https://github.com/uhm0311/EngineIOSharp.git</RepositoryUrl>
     <PackageIcon>icon.png</PackageIcon>
     <MinClientVersion>2.12</MinClientVersion>
-    <PackageVersion>2.0.0</PackageVersion>
+    <PackageVersion>2.0.0.1</PackageVersion>
     <PackageReleaseNotes>Add support for revision 4.</PackageReleaseNotes>
     <PackageOutputPath>../nuget</PackageOutputPath>
     <IncludeSymbols>true</IncludeSymbols>
