@@ -31,7 +31,7 @@ namespace EngineIOSharp.Server.Client.Transport
         public EngineIOPolling(HttpListenerRequest Request, int Protocol) : base(Protocol)
         {
             Origin = EngineIOHttpManager.GetOrigin(Request.Headers);
-            ForceBase64 = int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
+            ForceBase64 = Protocol == 4 || (int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0);
 
             ConnectionTimer = new Timer(1) { AutoReset = true };
             ConnectionTimer.Elapsed += (_, __) =>
@@ -96,6 +96,23 @@ namespace EngineIOSharp.Server.Client.Transport
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
+                    void SendString()
+                    {
+                        StringBuilder EncodedPackets = new StringBuilder();
+
+                        for (int i = 0; i < Packets.Length; i++)
+                        {
+                            EncodedPackets.Append(Packets[i].Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol));
+
+                            if (i < Packets.Length - 1)
+                            {
+                                EncodedPackets.Append(Protocol == 4 ? EngineIOPacket.Seperator : ":");
+                            }
+                        }
+
+                        Send(EncodedPackets.ToString());
+                    }
+
                     try
                     {
                         bool DoClose = ShouldClose != null;
@@ -107,40 +124,38 @@ namespace EngineIOSharp.Server.Client.Transport
                             ShouldClose = null;
                         }
 
-                        bool HasBinary = false;
-
-                        if (!ForceBase64)
+                        if (ForceBase64)
                         {
-                            foreach (EngineIOPacket Packet in Packets)
-                            {
-                                if (HasBinary = Packet.IsBinary)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (HasBinary)
-                        {
-                            List<byte> EncodedPacktes = new List<byte>();
-
-                            foreach (EngineIOPacket Packet in Packets)
-                            {
-                                EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true, Protocol: Protocol) as byte[]);
-                            }
-
-                            Send(EncodedPacktes.ToArray());
+                            SendString();
                         }
                         else
                         {
-                            StringBuilder EncodedPackets = new StringBuilder();
+                            bool HasBinary = false;
 
                             foreach (EngineIOPacket Packet in Packets)
                             {
-                                EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true, Protocol: Protocol));
+                                if (Packet.IsBinary)
+                                {
+                                    HasBinary = true;
+                                    break;
+                                }
                             }
 
-                            Send(EncodedPackets.ToString());
+                            if (HasBinary)
+                            {
+                                List<byte> EncodedPackets = new List<byte>();
+
+                                foreach (EngineIOPacket Packet in Packets)
+                                {
+                                    EncodedPackets.AddRange(Packet.Encode(EngineIOTransportType.polling, ForceBase64, true, Protocol) as byte[]);
+                                }
+
+                                Send(EncodedPackets.ToArray());
+                            }
+                            else
+                            {
+                                SendString();
+                            }
                         }
                     }
                     catch (Exception Exception)

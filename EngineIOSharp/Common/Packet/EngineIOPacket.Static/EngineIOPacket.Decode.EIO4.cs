@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace EngineIOSharp.Common.Packet
 {
@@ -39,7 +36,7 @@ namespace EngineIOSharp.Common.Packet
                         }
                         else
                         {
-                            Result.Add(Decode(Data));
+                            Result.Add(Decode(Data, 4));
                         }
                     }
                 }

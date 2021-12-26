@@ -44,7 +44,11 @@ namespace EngineIOSharp.Common.Packet
 
         internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false, int Protocol = 3)
         {
-            if (Protocol == 3)
+            if (ForceBase64 && ForceBinary)
+            {
+                throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
+            }
+            else if (Protocol == 3)
             {
                 return EncodeEIO3(TransportType, ForceBase64, ForceBinary);
             }

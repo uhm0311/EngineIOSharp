@@ -10,26 +10,33 @@ namespace EngineIOSharp.Common.Packet
 {
     partial class EngineIOPacket
     {
-        private static readonly string Seperator = "\u001e";
+        public static readonly string Seperator = "\x1e";
 
-        internal static EngineIOPacket Decode(string Data)
+        internal static EngineIOPacket Decode(string Data, int Protocol)
         {
             try
             {
-                EngineIOPacket Packet = new EngineIOPacket()
+                if (Data.StartsWith("b"))
                 {
-                    Type = (EngineIOPacketType)Data[0] - '0',
-                    IsText = true,
-                    IsBinary = false,
-                };
-
-                if (Data.Length > 1)
-                {
-                    Packet.Data = Data.Substring(1);
-                    Packet.RawData = Encoding.UTF8.GetBytes(Packet.Data);
+                    return DecodeBase64String(Data, Protocol);
                 }
+                else
+                {
+                    EngineIOPacket Packet = new EngineIOPacket()
+                    {
+                        Type = (EngineIOPacketType)Data[0] - '0',
+                        IsText = true,
+                        IsBinary = false,
+                    };
 
-                return Packet;
+                    if (Data.Length > 1)
+                    {
+                        Packet.Data = Data.Substring(1);
+                        Packet.RawData = Encoding.UTF8.GetBytes(Packet.Data);
+                    }
+
+                    return Packet;
+                }
             } 
             catch (Exception Exception)
             {
@@ -128,7 +135,7 @@ namespace EngineIOSharp.Common.Packet
                 }
                 else
                 {
-                    return Decode(Data);
+                    return Decode(Data, Protocol);
                 }
             }
             else if (EventArgs.IsBinary)

@@ -9,11 +9,6 @@ namespace EngineIOSharp.Common.Packet
     {
         private object EncodeEIO3(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false)
         {
-            if (ForceBase64 && ForceBinary)
-            {
-                throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
-            }
-
             try
             {
                 if (IsText || IsBinary)

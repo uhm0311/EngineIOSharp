@@ -27,7 +27,7 @@ namespace EngineIOSharp.Server.Client.Transport
             Client.OnError += OnWebSocketError;
             Client.Log.Output = EngineIOLogger.WebSocket;
 
-            ForceBase64 = EngineIOHttpManager.IsBase64Forced(Context.QueryString);
+            ForceBase64 = Protocol == 4 || EngineIOHttpManager.IsBase64Forced(Context.QueryString);
             Writable = true;
         }
 

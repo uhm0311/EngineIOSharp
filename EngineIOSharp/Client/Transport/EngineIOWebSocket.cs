@@ -73,7 +73,7 @@ namespace EngineIOSharp.Client.Transport
 
                 if (e.IsText)
                 {
-                    Packet = EngineIOPacket.Decode(e.Data);
+                    Packet = EngineIOPacket.Decode(e.Data, Protocol);
                 }
                 else
                 {

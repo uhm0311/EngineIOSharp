@@ -9,16 +9,11 @@ namespace EngineIOSharp.Common.Packet
     {
         private object EncodeEIO4(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false)
         {
-            if (ForceBase64 && ForceBinary)
-            {
-                throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
-            }
-
             try
             {
                 if (IsText || IsBinary)
                 {
-                    if ((TransportType == EngineIOTransportType.polling) || (!ForceBinary && (IsText || ForceBase64)))
+                    if (!ForceBinary && (IsText || ForceBase64))
                     {
                         StringBuilder Builder = new StringBuilder();
                         Builder.Append(IsText ? ((int)Type).ToString() : "b");
