@@ -96,7 +96,7 @@ namespace EngineIOSharp.Server
             {
                 if (EngineIOHttpManager.IsPolling(TransportName))
                 {
-                    EngineIOTransport Transport = new EngineIOPolling(Request);
+                    EngineIOTransport Transport = new EngineIOPolling(Request, EngineIOHttpManager.GetProtocol(Request.QueryString));
                     Transport.OnRequest(Request, Response);
 
                     Handshake(EngineIOSocketID.Generate(), Transport);
@@ -111,37 +111,6 @@ namespace EngineIOSharp.Server
                 EngineIOLogger.Error(this, Exception);
 
                 OnError();
-            }
-        }
-
-        internal static class Exceptions
-        {
-            public static readonly EngineIOException UNKNOWN_TRANSPORT = new EngineIOException("Unknown transport");
-            public static readonly EngineIOException BAD_REQUEST = new EngineIOException("Bad request");
-            public static readonly EngineIOException UNKNOWN_SID = new EngineIOException("Unknown sid");
-            public static readonly EngineIOException BAD_HANDSHAKE_METHOD = new EngineIOException("Bad handshake method");
-
-            private static readonly EngineIOException[] VALUES = new EngineIOException[]
-            {
-                UNKNOWN_TRANSPORT,
-                BAD_REQUEST,
-                UNKNOWN_SID,
-                BAD_HANDSHAKE_METHOD,
-            };
-
-            public static bool Contains(Exception Exception)
-            {
-                return Array.Exists(VALUES, Element => Element.Equals(Exception));
-            }
-
-            public static int IndexOf(Exception Exception)
-            {
-                if (Exception is EngineIOException)
-                {
-                    return Array.IndexOf(VALUES, Exception as EngineIOException);
-                }
-
-                return VALUES.Length;
             }
         }
     }

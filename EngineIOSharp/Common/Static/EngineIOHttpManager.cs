@@ -92,9 +92,19 @@ namespace EngineIOSharp.Common.Static
             return (Headers["Origin"] ?? Headers["origin"])?.Trim() ?? string.Empty;
         }
 
+        public static int GetProtocol(NameValueCollection QueryString)
+        {
+            return QueryString["EIO"] == "4" ? 4 : 3;
+        }
+
         public static bool IsBase64Forced(NameValueCollection QueryString)
         {
             return int.TryParse(QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
+        }
+
+        public static bool IsBinary(string ContentType)
+        {
+            return "application/octet-stream".Equals(ContentType);
         }
 
         public static EngineIOHttpMethod ParseMethod(string Method)

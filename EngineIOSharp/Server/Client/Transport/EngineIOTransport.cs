@@ -10,14 +10,17 @@ namespace EngineIOSharp.Server.Client.Transport
     internal abstract class EngineIOTransport : Emitter<EngineIOTransport, string, object>
     {
         internal string SID { get; set; }
+        public int Protocol { get; private set; }
         public EngineIOReadyState ReadyState { get; protected set; }
 
         public bool Discarded { get; protected set; }
         public bool Writable { get; protected set; }
         protected bool ForceBase64 { get; set; }
 
-        protected EngineIOTransport()
+        protected EngineIOTransport(int Protocol)
         {
+            this.Protocol = Protocol;
+
             ReadyState = EngineIOReadyState.OPEN;
             Discarded = false;
             Writable = false;

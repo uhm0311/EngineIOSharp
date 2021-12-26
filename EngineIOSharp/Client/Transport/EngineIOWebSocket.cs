@@ -73,7 +73,16 @@ namespace EngineIOSharp.Client.Transport
 
                 if (e.IsText)
                 {
-                    Packet = EngineIOPacket.Decode(e.Data);
+                    string Data = e.Data;
+
+                    if (Data.StartsWith("b"))
+                    {
+                        Packet = EngineIOPacket.DecodeBase64String(Data, Protocol);
+                    }
+                    else
+                    {
+                        Packet = EngineIOPacket.Decode(Data);
+                    }
                 }
                 else
                 {
@@ -122,7 +131,7 @@ namespace EngineIOSharp.Client.Transport
         {
             if (Packet != null)
             {
-                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64);
+                object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, Option.ForceBase64, Protocol: Protocol);
 
                 if (EncodedPacket is string)
                 {

@@ -3,7 +3,6 @@ using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 namespace EngineIOSharp.Client.Transport
@@ -16,6 +15,8 @@ namespace EngineIOSharp.Client.Transport
 
         public EngineIOReadyState ReadyState { get; protected set; }
         public bool Writable { get; protected set; }
+
+        public const int Protocol = 4;
 
         protected EngineIOTransport(EngineIOClientOption Option)
         {

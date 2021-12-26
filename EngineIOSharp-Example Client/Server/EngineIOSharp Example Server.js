@@ -1,8 +1,11 @@
-var engine = require('engine.io');
-var http = require('http').createServer();
-var server = engine.attach(http);
+const engine = require('engine.io');
+const http = require('http').createServer();
+const server = engine.attach(http, {
+	allowUpgrades: true,
+	allowEIO3: true
+});
 
-var port = 1009;
+const port = 1009;
 
 http.listen(port, function() {
 	console.log('Listening on ' + port);
@@ -14,7 +17,8 @@ http.listen(port, function() {
 		socket.on('message', function (message) { 
             console.log('Client : ' + message);
 
-            socket.send(message);
+			socket.send(message);
+			socket.send(message);
 		});
 		
 		socket.on('close', function(e, d) { 

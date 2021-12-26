@@ -1,15 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Text;
-using WebSocketSharp;
-using HttpListenerRequest = WebSocketSharp.Net.HttpListenerRequest;
 
 namespace EngineIOSharp.Common.Packet
 {
     partial class EngineIOPacket
     {
+        internal static readonly string Seperator = "\u001e";
+
         internal static EngineIOPacket Decode(string Data)
         {
             try
@@ -65,182 +64,53 @@ namespace EngineIOSharp.Common.Packet
             }
         }
 
-        internal static EngineIOPacket[] Decode(HttpWebResponse Response)
+        internal static EngineIOPacket DecodeBase64String(string Data, int Protocol)
         {
-            if (Response != null)
+            return Decode(ConvertBase64StringToByteBuffer(Data, Protocol));
+        }
+
+        internal static EngineIOPacket[] Decode(Stream Stream, bool IsBinary, int Protocol)
+        {
+            if (Protocol == 3)
             {
-                if (Response.StatusCode == HttpStatusCode.OK)
+                return DecodeEIO3(Stream, IsBinary);
+            }
+            else if (Protocol == 4)
+            {
+                if (!IsBinary)
                 {
-                    return Decode(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
+                    return DecodeEIO4(Stream);
                 }
                 else
                 {
-                    return new EngineIOPacket[] { CreateErrorPacket() };
+                    throw new ArgumentException("IsBinary is true with Protocol 4.", "IsBinary, Protocol");
                 }
-            }
-
-            return new EngineIOPacket[0];
-        }
-
-        internal static EngineIOPacket[] Decode(HttpListenerRequest Request)
-        {
-            if (Request != null)
-            {
-                return Decode(Request.InputStream, Request.ContentType.Equals("application/octet-stream"));
-            }
-
-            return new EngineIOPacket[0];
-        }
-
-        private static EngineIOPacket[] Decode(Stream Stream, bool IsBinary)
-        {
-            List<EngineIOPacket> Result = new List<EngineIOPacket>();
-            object Temp = string.Empty;
-
-            try
-            {
-                if (IsBinary)
-                {
-                    using (MemoryStream MemoryStream = new MemoryStream())
-                    {
-                        Stream.CopyTo(MemoryStream);
-                        Queue<byte> BufferQueue = new Queue<byte>(MemoryStream.ToArray());
-
-                        if (BufferQueue.Contains(0xff))
-                        {
-                            while (BufferQueue.Count > 0)
-                            {
-                                List<byte> RawBuffer = new List<byte>();
-                                bool IsText = BufferQueue.Dequeue() == 0;
-
-                                StringBuilder Buffer = new StringBuilder();
-                                int Size = 0;
-
-                                while (BufferQueue.Count > 0)
-                                {
-                                    byte TempSize = BufferQueue.Dequeue();
-
-                                    if (TempSize < 0xff)
-                                    {
-                                        Buffer.Append(TempSize);
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                Size = int.Parse(Buffer.ToString());
-                                Buffer.Clear();
-
-                                for (int i = 0; i < Size; i++)
-                                {
-                                    RawBuffer.Add(BufferQueue.Dequeue());
-                                }
-
-                                if (IsText)
-                                {
-                                    Result.Add(Decode(Encoding.UTF8.GetString(RawBuffer.ToArray())));
-                                }
-                                else
-                                {
-                                    Result.Add(Decode(RawBuffer.ToArray()));
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    using (StreamReader Reader = new StreamReader(Stream))
-                    {
-                        string Content = (Temp = Reader.ReadToEnd()).ToString();
-
-                        if (Content.Contains(':'))
-                        {
-                            while (Content.Length > 0)
-                            {
-                                StringBuilder Buffer = new StringBuilder();
-                                int Size = 0;
-
-                                for (int i = 0; i < Content.Length; i++)
-                                {
-                                    if (Content[i] != ':')
-                                    {
-                                        Buffer.Append(Content[i]);
-                                    }
-                                    else
-                                    {
-                                        break;
-                                    }
-                                }
-
-                                Size = int.Parse(Buffer.ToString());
-                                Content = Content.Substring(Buffer.Length + 1);
-                                Buffer.Clear();
-
-                                for (int i = 0; i < Size; i++)
-                                {
-                                    Buffer.Append(Content[i]);
-                                }
-
-                                Content = Content.Substring(Buffer.Length);
-                                string Data = Buffer.ToString();
-
-                                if (Data.StartsWith("b"))
-                                {
-                                    Result.Add(DecodeBase64String(Data));
-                                }
-                                else
-                                {
-                                    Result.Add(Decode(Data));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception Exception)
-            {
-                EngineIOLogger.Error("Packet decoding failed. " + Temp, Exception);
-
-                Result.Add(CreateErrorPacket(Exception));
-            }
-
-            return Result.ToArray();
-        }
-
-        internal static EngineIOPacket Decode(MessageEventArgs EventArgs)
-        {
-            if (EventArgs.IsText)
-            {
-                string Data = EventArgs.Data;
-
-                if (Data.StartsWith("b"))
-                {
-                    return DecodeBase64String(Data);
-                }
-                else
-                {
-                    return Decode(Data);
-                }
-            }
-            else if (EventArgs.IsBinary)
-            {
-                return Decode(EventArgs.RawData);
             }
             else
             {
-                return CreateNoopPacket();
+                throw CreateProtocolException(Protocol);
             }
         }
 
-        private static EngineIOPacket DecodeBase64String(string Data)
+        private static byte[] ConvertBase64StringToByteBuffer(string Data, int Protocol)
         {
-            List<byte> RawBuffer = new List<byte>() { byte.Parse(Data[1].ToString()) };
+            if (Protocol == 3)
+            {
+                return ConvertBase64StringToRawBufferEIO3(Data);
+            }
+            else if (Protocol == 4)
+            {
+                return ConvertBase64StringToRawBufferEIO4(Data);
+            }
+            else
+            {
+                throw CreateProtocolException(Protocol);
+            }
+        }
 
-            RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(2)));
-            return Decode(RawBuffer.ToArray());
+        private static Exception CreateProtocolException(int Protocol)
+        {
+            return new ArgumentException(string.Format("Invalid Protocol {0}", Protocol), "Protocol");
         }
     }
 }

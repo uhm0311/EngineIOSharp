@@ -1,5 +1,4 @@
-﻿using EngineIOSharp.Common;
-using EngineIOSharp.Server;
+﻿using EngineIOSharp.Server;
 using System;
 
 namespace EngineIOSharp.Example.Server
@@ -10,7 +9,7 @@ namespace EngineIOSharp.Example.Server
         {
             //EngineIOLogger.DoWrite = false;
 
-            using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009)))
+            using (EngineIOServer server = new EngineIOServer(new EngineIOServerOption(1009, AllowEIO3: true)))
             {
                 Console.WriteLine("Listening on " + server.Option.Port);
 

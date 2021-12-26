@@ -282,8 +282,6 @@ namespace EngineIOSharp.Client
         {
             if (ReadyState != EngineIOReadyState.CLOSED)
             {
-                StopHeartbeat();
-
                 Transport.Off(EngineIOTransport.Event.CLOSE);
                 Transport.Close();
                 Transport.Off();
@@ -313,11 +311,6 @@ namespace EngineIOSharp.Client
                         Option.Query.Add("sid", Handshake.SID);
 
                         OnOpen();
-
-                        if (ReadyState != EngineIOReadyState.CLOSED)
-                        {
-                            StartHeartbeat();
-                        }
                         break;
 
                     case EngineIOPacketType.PING:
@@ -325,7 +318,6 @@ namespace EngineIOSharp.Client
                         break;
 
                     case EngineIOPacketType.PONG:
-                        SimpleMutex.Lock(PongMutex, () => Pong++);
                         break;
 
                     case EngineIOPacketType.MESSAGE:

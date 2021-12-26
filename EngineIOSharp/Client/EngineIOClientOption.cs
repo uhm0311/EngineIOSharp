@@ -102,7 +102,7 @@ namespace EngineIOSharp.Client
 
             if (!this.Query.ContainsKey("EIO"))
             {
-                this.Query.Add("EIO", "3");
+                this.Query.Add("EIO", "4");
             }
 
             if (this.Query.ContainsKey("transport"))

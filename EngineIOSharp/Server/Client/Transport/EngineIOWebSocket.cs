@@ -16,7 +16,7 @@ namespace EngineIOSharp.Server.Client.Transport
         private readonly Semaphore Semaphore;
         private readonly WebSocket Client;
 
-        internal EngineIOWebSocket(WebSocketContext Context)
+        internal EngineIOWebSocket(WebSocketContext Context, int Protocol) : base(Protocol)
         {
             Semaphore = new Semaphore(0, 1);
             Semaphore.Release();
@@ -27,7 +27,7 @@ namespace EngineIOSharp.Server.Client.Transport
             Client.OnError += OnWebSocketError;
             Client.Log.Output = EngineIOLogger.WebSocket;
 
-            ForceBase64 = EngineIOHttpManager.IsBase64Forced(Context.QueryString);
+            ForceBase64 = Protocol == 4 || EngineIOHttpManager.IsBase64Forced(Context.QueryString);
             Writable = true;
         }
 
@@ -48,7 +48,25 @@ namespace EngineIOSharp.Server.Client.Transport
                 Client.CustomHeaders = CustomHeaders;
             }
 
-            EngineIOPacket Packet = EngineIOPacket.Decode(e);
+            EngineIOPacket Packet = EngineIOPacket.CreateNoopPacket();
+
+            if (e.IsText)
+            {
+                string Data = e.Data;
+
+                if (Data.StartsWith("b"))
+                {
+                    Packet = EngineIOPacket.DecodeBase64String(Data, Protocol);
+                }
+                else
+                {
+                    Packet = EngineIOPacket.Decode(Data);
+                }
+            }
+            else if (e.IsBinary)
+            {
+                Packet = EngineIOPacket.Decode(e.RawData);
+            }
 
             if (Packet.Type != EngineIOPacketType.CLOSE)
             {
@@ -90,7 +108,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                         foreach (EngineIOPacket Packet in Packets)
                         {
-                            object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, ForceBase64);
+                            object EncodedPacket = Packet.Encode(EngineIOTransportType.websocket, ForceBase64, Protocol: Protocol);
 
                             if (EncodedPacket is string)
                             {

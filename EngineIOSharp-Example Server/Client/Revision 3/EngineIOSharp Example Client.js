@@ -1,4 +1,6 @@
-var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3');
+var socket = require('engine.io-client')('ws://127.0.0.1:1009/engine.io/?EIO=3', {
+	upgrade: false,
+});
 
 socket.on('open', function () {
 	console.log('Connected!');
