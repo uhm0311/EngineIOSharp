@@ -1,5 +1,4 @@
 ﻿using EngineIOSharp.Client;
-using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using System;
 using System.Text;

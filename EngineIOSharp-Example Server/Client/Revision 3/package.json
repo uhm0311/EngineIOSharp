@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "engine.io-client": "^3.5.2"
+  }
+}

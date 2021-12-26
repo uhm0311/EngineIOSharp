@@ -9,7 +9,6 @@ namespace EngineIOSharp.Common.Static
     /// </summary>
     internal static class EngineIOSocketID
     {
-        private static readonly object Mutex = new object();
         private static readonly RNGCryptoServiceProvider Crypto = new RNGCryptoServiceProvider();
 
         private const int BUFFER_SIZE = 4096;

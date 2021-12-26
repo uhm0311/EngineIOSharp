@@ -28,10 +28,10 @@ namespace EngineIOSharp.Server.Client.Transport
         private Action ShouldClose;
         private EngineIOTimeout CloseTimer;
 
-        public EngineIOPolling(HttpListenerRequest Request)
+        public EngineIOPolling(HttpListenerRequest Request, int Protocol) : base(Protocol)
         {
             Origin = EngineIOHttpManager.GetOrigin(Request.Headers);
-            ForceBase64 = int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
+            ForceBase64 = Protocol == 4 || (int.TryParse(Request.QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0);
 
             ConnectionTimer = new Timer(1) { AutoReset = true };
             ConnectionTimer.Elapsed += (_, __) =>
@@ -72,7 +72,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
             if (Writable)
             {
-                Send(EngineIOPacket.CreateClosePacket().Encode(EngineIOTransportType.polling, ForceBase64));
+                Send(EngineIOPacket.CreateClosePacket().Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol));
                 OnClose();
             }
             else if (Discarded)
@@ -96,6 +96,23 @@ namespace EngineIOSharp.Server.Client.Transport
 
                 ThreadPool.QueueUserWorkItem((_) =>
                 {
+                    void SendString()
+                    {
+                        StringBuilder EncodedPackets = new StringBuilder();
+
+                        for (int i = 0; i < Packets.Length; i++)
+                        {
+                            EncodedPackets.Append(Packets[i].Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol));
+
+                            if (Protocol == 4 && i < Packets.Length - 1)
+                            {
+                                EncodedPackets.Append(EngineIOPacket.Seperator);
+                            }
+                        }
+
+                        Send(EncodedPackets.ToString());
+                    }
+
                     try
                     {
                         bool DoClose = ShouldClose != null;
@@ -107,40 +124,38 @@ namespace EngineIOSharp.Server.Client.Transport
                             ShouldClose = null;
                         }
 
-                        bool HasBinary = false;
-
-                        if (!ForceBase64)
+                        if (ForceBase64)
                         {
-                            foreach (EngineIOPacket Packet in Packets)
-                            {
-                                if (HasBinary = Packet.IsBinary)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (HasBinary)
-                        {
-                            List<byte> EncodedPacktes = new List<byte>();
-
-                            foreach (EngineIOPacket Packet in Packets)
-                            {
-                                EncodedPacktes.AddRange(Packet.Encode(EngineIOTransportType.polling, false, true) as byte[]);
-                            }
-
-                            Send(EncodedPacktes.ToArray());
+                            SendString();
                         }
                         else
                         {
-                            StringBuilder EncodedPackets = new StringBuilder();
+                            bool IsBinary = false;
 
                             foreach (EngineIOPacket Packet in Packets)
                             {
-                                EncodedPackets.Append(Packet.Encode(EngineIOTransportType.polling, true));
+                                if (Packet.IsBinary)
+                                {
+                                    IsBinary = true;
+                                    break;
+                                }
                             }
 
-                            Send(EncodedPackets.ToString());
+                            if (IsBinary)
+                            {
+                                List<byte> EncodedPackets = new List<byte>();
+
+                                foreach (EngineIOPacket Packet in Packets)
+                                {
+                                    EncodedPackets.AddRange(Packet.Encode(EngineIOTransportType.polling, ForceBase64, IsBinary, Protocol) as byte[]);
+                                }
+
+                                Send(EncodedPackets.ToArray());
+                            }
+                            else
+                            {
+                                SendString();
+                            }
                         }
                     }
                     catch (Exception Exception)
@@ -157,41 +172,44 @@ namespace EngineIOSharp.Server.Client.Transport
         {
             using (PollResponse)
             {
-                try
+                if (PollResponse != null)
                 {
-                    byte[] RawData = null;
-
-                    if (EncodedPacket is string)
+                    try
                     {
-                        RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
-                    }
-                    else if (EncodedPacket is byte[])
-                    {
-                        RawData = EncodedPacket as byte[];
-                    }
+                        byte[] RawData = null;
 
-                    if ((RawData?.Length ?? 0) > 0)
-                    {
-                        PollResponse.Headers = SetHeaders(PollResponse.Headers);
-
-                        using (PollResponse.OutputStream)
+                        if (EncodedPacket is string)
                         {
-                            PollResponse.KeepAlive = false;
+                            RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                        }
+                        else if (EncodedPacket is byte[])
+                        {
+                            RawData = EncodedPacket as byte[];
+                        }
 
-                            PollResponse.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
-                            PollResponse.ContentEncoding = EncodedPacket is string ? Encoding.UTF8 : null;
-                            PollResponse.ContentLength64 = RawData.Length;
+                        if ((RawData?.Length ?? 0) > 0)
+                        {
+                            PollResponse.Headers = SetHeaders(PollResponse.Headers);
 
-                            PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                            using (PollResponse.OutputStream)
+                            {
+                                PollResponse.KeepAlive = false;
+
+                                PollResponse.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
+                                PollResponse.ContentEncoding = EncodedPacket is string ? Encoding.UTF8 : null;
+                                PollResponse.ContentLength64 = RawData.Length;
+
+                                PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                            }
                         }
                     }
-                }
-                catch (Exception Exception)
-                {
-                    if (!(Exception is NullReferenceException))
+                    catch (Exception Exception)
                     {
-                        OnException?.Invoke(Exception);
-                        CloseResponse(PollResponse);
+                        if (!(Exception is NullReferenceException))
+                        {
+                            OnException?.Invoke(Exception);
+                            CloseResponse(PollResponse);
+                        }
                     }
                 }
             }
@@ -287,7 +305,7 @@ namespace EngineIOSharp.Server.Client.Transport
 
                     if (Writable && ShouldClose != null)
                     {
-                        Send(EngineIOPacket.CreateNoopPacket().Encode(EngineIOTransportType.polling, ForceBase64), OnPollRequestClose);
+                        Send(EngineIOPacket.CreateNoopPacket().Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol), OnPollRequestClose);
                     }
                 }
                 else
@@ -316,7 +334,7 @@ namespace EngineIOSharp.Server.Client.Transport
                 {
                     if (DataRequest == null)
                     {
-                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request);
+                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request.InputStream, EngineIOHttpManager.IsBinary(Request.ContentType), Protocol);
                         Response.Headers = SetHeaders(Response.Headers);
 
                         using (Response.OutputStream)

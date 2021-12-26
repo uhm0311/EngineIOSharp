@@ -1,7 +1,5 @@
-﻿using EngineIOSharp.Client.Transport;
-using EngineIOSharp.Common.Enum.Internal;
+﻿using EngineIOSharp.Common.Enum.Internal;
 using System;
-using System.Collections.Generic;
 using System.Text;
 
 namespace EngineIOSharp.Common.Packet
@@ -44,80 +42,23 @@ namespace EngineIOSharp.Common.Packet
             return Builder.ToString();
         }
 
-        internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false)
+        internal object Encode(EngineIOTransportType TransportType, bool ForceBase64, bool ForceBinary = false, int Protocol = 3)
         {
             if (ForceBase64 && ForceBinary)
             {
                 throw new ArgumentException("ForceBase64 && ForceBinary cannot be true.", "ForceBase64, ForceBinary");
             }
-
-            try
+            else if (Protocol == 3)
             {
-                if (IsText || IsBinary)
-                {
-                    if (TransportType == EngineIOTransportType.polling)
-                    {
-                        if (!ForceBinary && (IsText || ForceBase64))
-                        {
-                            StringBuilder Builder = new StringBuilder();
-                            Builder.Append((int)Type);
-                            Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
-
-                            int Length = Builder.Length + (IsText ? 0 : 1);
-                            Builder.Insert(0, string.Format("{0}:" + (IsText ? "" : "b"), Length));
-
-                            return Builder.ToString();
-                        }
-                        else
-                        {
-                            List<byte> Buffer = new List<byte>() { (byte)(IsText ? 0 : 1) };
-                            byte[] RawData = IsText ? Encoding.UTF8.GetBytes(Data) : this.RawData;
-
-                            foreach (char Character in (RawData.Length + 1).ToString())
-                            {
-                                Buffer.Add(byte.Parse(Character.ToString()));
-                            }
-
-                            Buffer.Add(0xff);
-
-                            if (IsText)
-                            {
-                                Buffer.Add(Convert.ToByte((char)(Type + 48)));
-                            }
-                            else
-                            {
-                                Buffer.Add((byte)Type);
-                            }
-
-                            Buffer.AddRange(RawData);
-                            return Buffer.ToArray();
-                        }
-                    }
-                    else
-                    {
-                        if (!ForceBinary && (IsText || ForceBase64))
-                        {
-                            StringBuilder Builder = new StringBuilder();
-                            Builder.Append((IsText ? "" : "b") + (int)Type);
-                            Builder.Append(IsText ? Data : Convert.ToBase64String(RawData));
-
-                            return Builder.ToString();
-                        }
-                        else
-                        {
-                            List<byte> Buffer = new List<byte>() { (byte)Type };
-                            Buffer.AddRange(RawData);
-
-                            return Buffer.ToArray();
-                        }
-                    }
-                }
-
-                throw new EngineIOException("Packet encoding failed. " + this);
+                return EncodeEIO3(TransportType, ForceBase64, ForceBinary);
             }
-            catch (Exception Exception)
+            else if (Protocol == 4)
             {
-                return CreateErrorPacket(Exception);
+                return EncodeEIO4(TransportType, ForceBase64, ForceBinary);
+            }
+            else
+            {
+                throw CreateProtocolException(Protocol);
             }
         }
     }

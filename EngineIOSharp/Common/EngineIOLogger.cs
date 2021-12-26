@@ -19,7 +19,7 @@ namespace EngineIOSharp.Common
         {
             if (DoWrite)
             {
-                Console.WriteLine("{0} : {1}", sender, e);
+                Console.Error.WriteLine("{0} : {1}", sender, e);
             }
         };
     }
