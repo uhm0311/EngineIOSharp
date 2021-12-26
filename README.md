@@ -1,5 +1,5 @@
 # EngineIOSharp
-`EngineIOSharp` is a **Engine.IO Protocol revision `3` client and server** library based on `WebSocket` or `Long-Polling` transport. It depends on [WebSocketSharp](https://github.com/uhm0311/websocket-sharp) to use `WebSocket` transport. `Long-Polling` transport is implemented by itself.
+`EngineIOSharp` is a **Engine.IO Protocol revision `4` client and server** library based on `WebSocket` or `Long-Polling` transport. It depends on [WebSocketSharp](https://github.com/uhm0311/websocket-sharp) to use `WebSocket` transport. `Long-Polling` transport is implemented by itself.
 
 # Installation
 - [Nuget gallery](https://www.nuget.org/packages/EngineIOSharp)
