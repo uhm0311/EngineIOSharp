@@ -7,7 +7,7 @@ namespace EngineIOSharp.Common.Packet
 {
     partial class EngineIOPacket
     {
-        public static readonly string Seperator = "\x1e";
+        internal static readonly string Seperator = "\u001e";
 
         internal static EngineIOPacket Decode(string Data)
         {

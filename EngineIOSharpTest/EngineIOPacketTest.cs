@@ -163,5 +163,44 @@ namespace EngineIOSharp.Test
             Assert.AreEqual(Packets[0].Data, "hello");
             Assert.AreEqual(Packets[1].Data, "¢æ");
         }
+
+        [TestMethod]
+        public void TestStreamDecode3()
+        {
+            StringBuilder Buffer = new StringBuilder();
+            string Base64Data = Convert.ToBase64String(RawData);
+
+            {
+                Buffer.Append((int)EngineIOPacketType.MESSAGE);
+                Buffer.Append(Data);
+            }
+            Buffer.Append(EngineIOPacket.Seperator);
+            {
+                Buffer.Append('b');
+                Buffer.Append(Base64Data);
+            }
+
+            MemoryStream Stream = new MemoryStream(Encoding.UTF8.GetBytes(Buffer.ToString()));
+            EngineIOPacket[] Packets = EngineIOPacket.Decode(Stream, false, 4);
+
+            Assert.IsNotNull(Packets);
+            Assert.IsTrue(Packets.Length == 2);
+
+            Assert.AreEqual(Packets[0].Data, Data);
+            Assert.IsTrue(Enumerable.SequenceEqual(Packets[1].RawData, RawData));
+        }
+
+        [TestMethod]
+        public void TestStreamDecode4()
+        {
+            MemoryStream Stream = new MemoryStream(Encoding.UTF8.GetBytes("4hello\u001e4¢æ"));
+            EngineIOPacket[] Packets = EngineIOPacket.Decode(Stream, false, 4);
+
+            Assert.IsNotNull(Packets);
+            Assert.IsTrue(Packets.Length == 2);
+
+            Assert.AreEqual(Packets[0].Data, "hello");
+            Assert.AreEqual(Packets[1].Data, "¢æ");
+        }
     }
 }

@@ -104,9 +104,9 @@ namespace EngineIOSharp.Server.Client.Transport
                         {
                             EncodedPackets.Append(Packets[i].Encode(EngineIOTransportType.polling, ForceBase64, Protocol: Protocol));
 
-                            if (i < Packets.Length - 1)
+                            if (Protocol == 4 && i < Packets.Length - 1)
                             {
-                                EncodedPackets.Append(Protocol == 4 ? EngineIOPacket.Seperator : ":");
+                                EncodedPackets.Append(EngineIOPacket.Seperator);
                             }
                         }
 
@@ -130,24 +130,24 @@ namespace EngineIOSharp.Server.Client.Transport
                         }
                         else
                         {
-                            bool HasBinary = false;
+                            bool IsBinary = false;
 
                             foreach (EngineIOPacket Packet in Packets)
                             {
                                 if (Packet.IsBinary)
                                 {
-                                    HasBinary = true;
+                                    IsBinary = true;
                                     break;
                                 }
                             }
 
-                            if (HasBinary)
+                            if (IsBinary)
                             {
                                 List<byte> EncodedPackets = new List<byte>();
 
                                 foreach (EngineIOPacket Packet in Packets)
                                 {
-                                    EncodedPackets.AddRange(Packet.Encode(EngineIOTransportType.polling, ForceBase64, true, Protocol) as byte[]);
+                                    EncodedPackets.AddRange(Packet.Encode(EngineIOTransportType.polling, ForceBase64, IsBinary, Protocol) as byte[]);
                                 }
 
                                 Send(EncodedPackets.ToArray());
