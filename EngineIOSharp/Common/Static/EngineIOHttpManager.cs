@@ -102,6 +102,11 @@ namespace EngineIOSharp.Common.Static
             return int.TryParse(QueryString["b64"]?.Trim() ?? string.Empty, out int Base64) && Base64 > 0;
         }
 
+        public static bool IsBinary(string ContentType)
+        {
+            return "application/octet-stream".Equals(ContentType);
+        }
+
         public static EngineIOHttpMethod ParseMethod(string Method)
         {
             return (EngineIOHttpMethod)System.Enum.Parse(typeof(EngineIOHttpMethod), Method.Trim().ToUpper());

@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Net;
 using System.Text;
-using WebSocketSharp;
-using HttpListenerRequest = WebSocketSharp.Net.HttpListenerRequest;
 
 namespace EngineIOSharp.Common.Packet
 {
@@ -12,31 +9,24 @@ namespace EngineIOSharp.Common.Packet
     {
         public static readonly string Seperator = "\x1e";
 
-        internal static EngineIOPacket Decode(string Data, int Protocol)
+        internal static EngineIOPacket Decode(string Data)
         {
             try
             {
-                if (Data.StartsWith("b"))
+                EngineIOPacket Packet = new EngineIOPacket()
                 {
-                    return DecodeBase64String(Data, Protocol);
-                }
-                else
+                    Type = (EngineIOPacketType)Data[0] - '0',
+                    IsText = true,
+                    IsBinary = false,
+                };
+
+                if (Data.Length > 1)
                 {
-                    EngineIOPacket Packet = new EngineIOPacket()
-                    {
-                        Type = (EngineIOPacketType)Data[0] - '0',
-                        IsText = true,
-                        IsBinary = false,
-                    };
-
-                    if (Data.Length > 1)
-                    {
-                        Packet.Data = Data.Substring(1);
-                        Packet.RawData = Encoding.UTF8.GetBytes(Packet.Data);
-                    }
-
-                    return Packet;
+                    Packet.Data = Data.Substring(1);
+                    Packet.RawData = Encoding.UTF8.GetBytes(Packet.Data);
                 }
+
+                return Packet;
             } 
             catch (Exception Exception)
             {
@@ -74,86 +64,35 @@ namespace EngineIOSharp.Common.Packet
             }
         }
 
-        internal static EngineIOPacket[] Decode(HttpWebResponse Response, int Protocol)
+        internal static EngineIOPacket DecodeBase64String(string Data, int Protocol)
         {
-            if (Response != null)
-            {
-                if (Response.StatusCode == HttpStatusCode.OK)
-                {
-                    if (Protocol == 3)
-                    {
-                        return DecodeEIO3(Response.GetResponseStream(), Response.ContentType.Equals("application/octet-stream"));
-                    }
-                    else if (Protocol == 4)
-                    {
-                        return DecodeEIO4(Response.GetResponseStream());
-                    }
-                    else
-                    {
-                        throw CreateProtocolException(Protocol);
-                    }
-                }
-                else
-                {
-                    return new EngineIOPacket[] { CreateErrorPacket() };
-                }
-            }
-
-            return new EngineIOPacket[0];
+            return Decode(ConvertBase64StringToByteBuffer(Data, Protocol));
         }
 
-        internal static EngineIOPacket[] Decode(HttpListenerRequest Request, int Protocol)
+        internal static EngineIOPacket[] Decode(Stream Stream, bool IsBinary, int Protocol)
         {
-            if (Request != null)
+            if (Protocol == 3)
             {
-                if (Protocol == 3)
+                return DecodeEIO3(Stream, IsBinary);
+            }
+            else if (Protocol == 4)
+            {
+                if (!IsBinary)
                 {
-                    return DecodeEIO3(Request.InputStream, Request.ContentType.Equals("application/octet-stream"));
-                }
-                else if (Protocol == 4)
-                {
-                    return DecodeEIO4(Request.InputStream);
+                    return DecodeEIO4(Stream);
                 }
                 else
                 {
-                    throw CreateProtocolException(Protocol);
+                    throw new ArgumentException("IsBinary is true with Protocol 4.", "IsBinary, Protocol");
                 }
-            }
-
-            return new EngineIOPacket[0];
-        }
-
-        internal static EngineIOPacket Decode(MessageEventArgs EventArgs, int Protocol)
-        {
-            if (EventArgs.IsText)
-            {
-                string Data = EventArgs.Data;
-
-                if (Data.StartsWith("b"))
-                {
-                    return DecodeBase64String(Data, Protocol);
-                }
-                else
-                {
-                    return Decode(Data, Protocol);
-                }
-            }
-            else if (EventArgs.IsBinary)
-            {
-                return Decode(EventArgs.RawData);
             }
             else
             {
-                return CreateNoopPacket();
+                throw CreateProtocolException(Protocol);
             }
         }
 
-        private static EngineIOPacket DecodeBase64String(string Data, int Protocol)
-        {
-            return Decode(ConvertBase64StringToByteBuffer(Data, Protocol).ToArray());
-        }
-
-        private static List<byte> ConvertBase64StringToByteBuffer(string Data, int Protocol)
+        private static byte[] ConvertBase64StringToByteBuffer(string Data, int Protocol)
         {
             if (Protocol == 3)
             {

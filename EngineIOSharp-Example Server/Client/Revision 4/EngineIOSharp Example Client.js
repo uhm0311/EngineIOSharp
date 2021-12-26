@@ -1,6 +1,6 @@
 const { Socket } = require('engine.io-client');
 const socket = new Socket('ws://127.0.0.1:1009/engine.io/?EIO=4', {
-	forceBase64: false,
+	upgrade: false,
 });
 
 socket.on('open', function () {

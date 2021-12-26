@@ -3,7 +3,6 @@ using EngineIOSharp.Common;
 using EngineIOSharp.Common.Enum;
 using EngineIOSharp.Common.Packet;
 using System;
-using System.Collections.Generic;
 using System.Threading;
 
 namespace EngineIOSharp.Client.Transport

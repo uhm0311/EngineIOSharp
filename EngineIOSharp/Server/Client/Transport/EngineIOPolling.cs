@@ -331,7 +331,7 @@ namespace EngineIOSharp.Server.Client.Transport
                 {
                     if (DataRequest == null)
                     {
-                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request, Protocol);
+                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Request.InputStream, EngineIOHttpManager.IsBinary(Request.ContentType), Protocol);
                         Response.Headers = SetHeaders(Response.Headers);
 
                         using (Response.OutputStream)

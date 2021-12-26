@@ -36,7 +36,7 @@ namespace EngineIOSharp.Common.Packet
                         }
                         else
                         {
-                            Result.Add(Decode(Data, 4));
+                            Result.Add(Decode(Data));
                         }
                     }
                 }
@@ -51,12 +51,12 @@ namespace EngineIOSharp.Common.Packet
             return Result.ToArray();
         }
 
-        private static List<byte> ConvertBase64StringToRawBufferEIO4(string Data)
+        private static byte[] ConvertBase64StringToRawBufferEIO4(string Data)
         {
             List<byte> RawBuffer = new List<byte>() { (byte)EngineIOPacketType.MESSAGE };
             RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(1)));
 
-            return RawBuffer;
+            return RawBuffer.ToArray();
         }
     }
 }

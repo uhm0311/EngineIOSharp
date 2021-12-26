@@ -250,9 +250,21 @@ namespace EngineIOSharp.Client.Transport
 
                     if (Method == EngineIOHttpMethod.GET)
                     {
-                        EngineIOPacket[] Packets = EngineIOPacket.Decode(Response, Protocol);
+                        List<EngineIOPacket> Packets = new List<EngineIOPacket>();
 
-                        if ((Packets?.Length ?? 0) > 0)
+                        if (Response != null)
+                        {
+                            if (Response.StatusCode == HttpStatusCode.OK)
+                            {
+                                Packets.AddRange(EngineIOPacket.Decode(Response.GetResponseStream(), EngineIOHttpManager.IsBinary(Response.ContentType), Protocol));
+                            }
+                            else
+                            {
+                                Packets.Add(EngineIOPacket.CreateErrorPacket());
+                            }
+                        }
+
+                        if (Packets.Count > 0)
                         {
                             foreach (EngineIOPacket Packet in Packets)
                             {

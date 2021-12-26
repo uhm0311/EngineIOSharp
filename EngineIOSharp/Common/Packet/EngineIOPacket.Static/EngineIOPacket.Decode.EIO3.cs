@@ -56,7 +56,7 @@ namespace EngineIOSharp.Common.Packet
 
                                 if (IsText)
                                 {
-                                    Result.Add(Decode(Encoding.UTF8.GetString(RawBuffer.ToArray()), 3));
+                                    Result.Add(Decode(Encoding.UTF8.GetString(RawBuffer.ToArray())));
                                 }
                                 else
                                 {
@@ -109,7 +109,7 @@ namespace EngineIOSharp.Common.Packet
                                 }
                                 else
                                 {
-                                    Result.Add(Decode(Data, 3));
+                                    Result.Add(Decode(Data));
                                 }
                             }
                         }
@@ -126,12 +126,12 @@ namespace EngineIOSharp.Common.Packet
             return Result.ToArray();
         }
 
-        private static List<byte> ConvertBase64StringToRawBufferEIO3(string Data)
+        private static byte[] ConvertBase64StringToRawBufferEIO3(string Data)
         {
             List<byte> RawBuffer = new List<byte>() { byte.Parse(Data[1].ToString()) };
             RawBuffer.AddRange(Convert.FromBase64String(Data.Substring(2)));
 
-            return RawBuffer;
+            return RawBuffer.ToArray();
         }
     }
 }

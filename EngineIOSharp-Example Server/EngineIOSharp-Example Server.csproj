@@ -74,6 +74,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Client\Revision 3\EngineIOSharp Example Client.html" />
     <Content Include="Client\Revision 3\EngineIOSharp Example Client.js" />
     <Content Include="Client\Revision 4\EngineIOSharp Example Client.js" />
   </ItemGroup>

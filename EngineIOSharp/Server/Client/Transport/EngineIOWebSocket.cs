@@ -48,7 +48,25 @@ namespace EngineIOSharp.Server.Client.Transport
                 Client.CustomHeaders = CustomHeaders;
             }
 
-            EngineIOPacket Packet = EngineIOPacket.Decode(e, Protocol);
+            EngineIOPacket Packet = EngineIOPacket.CreateNoopPacket();
+
+            if (e.IsText)
+            {
+                string Data = e.Data;
+
+                if (Data.StartsWith("b"))
+                {
+                    Packet = EngineIOPacket.DecodeBase64String(Data, Protocol);
+                }
+                else
+                {
+                    Packet = EngineIOPacket.Decode(Data);
+                }
+            }
+            else if (e.IsBinary)
+            {
+                Packet = EngineIOPacket.Decode(e.RawData);
+            }
 
             if (Packet.Type != EngineIOPacketType.CLOSE)
             {

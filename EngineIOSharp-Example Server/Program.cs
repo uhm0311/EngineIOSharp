@@ -1,5 +1,4 @@
-﻿using EngineIOSharp.Common;
-using EngineIOSharp.Server;
+﻿using EngineIOSharp.Server;
 using System;
 
 namespace EngineIOSharp.Example.Server
