@@ -172,41 +172,44 @@ namespace EngineIOSharp.Server.Client.Transport
         {
             using (PollResponse)
             {
-                try
+                if (PollResponse != null)
                 {
-                    byte[] RawData = null;
-
-                    if (EncodedPacket is string)
+                    try
                     {
-                        RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
-                    }
-                    else if (EncodedPacket is byte[])
-                    {
-                        RawData = EncodedPacket as byte[];
-                    }
+                        byte[] RawData = null;
 
-                    if ((RawData?.Length ?? 0) > 0)
-                    {
-                        PollResponse.Headers = SetHeaders(PollResponse.Headers);
-
-                        using (PollResponse.OutputStream)
+                        if (EncodedPacket is string)
                         {
-                            PollResponse.KeepAlive = false;
+                            RawData = Encoding.UTF8.GetBytes(EncodedPacket as string);
+                        }
+                        else if (EncodedPacket is byte[])
+                        {
+                            RawData = EncodedPacket as byte[];
+                        }
 
-                            PollResponse.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
-                            PollResponse.ContentEncoding = EncodedPacket is string ? Encoding.UTF8 : null;
-                            PollResponse.ContentLength64 = RawData.Length;
+                        if ((RawData?.Length ?? 0) > 0)
+                        {
+                            PollResponse.Headers = SetHeaders(PollResponse.Headers);
 
-                            PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                            using (PollResponse.OutputStream)
+                            {
+                                PollResponse.KeepAlive = false;
+
+                                PollResponse.ContentType = EncodedPacket is string ? "text/plain" : "application/octet-stream";
+                                PollResponse.ContentEncoding = EncodedPacket is string ? Encoding.UTF8 : null;
+                                PollResponse.ContentLength64 = RawData.Length;
+
+                                PollResponse.OutputStream.Write(RawData, 0, RawData.Length);
+                            }
                         }
                     }
-                }
-                catch (Exception Exception)
-                {
-                    if (!(Exception is NullReferenceException))
+                    catch (Exception Exception)
                     {
-                        OnException?.Invoke(Exception);
-                        CloseResponse(PollResponse);
+                        if (!(Exception is NullReferenceException))
+                        {
+                            OnException?.Invoke(Exception);
+                            CloseResponse(PollResponse);
+                        }
                     }
                 }
             }
