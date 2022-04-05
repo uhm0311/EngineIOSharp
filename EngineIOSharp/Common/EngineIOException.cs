@@ -4,9 +4,9 @@ namespace EngineIOSharp.Common
 {
     public class EngineIOException : Exception
     {
-        internal EngineIOException(string message) : base(message) { }
+        public EngineIOException(string message) : base(message) { }
 
-        internal EngineIOException(string message, Exception innerException) : base(message, innerException) { }
+        public EngineIOException(string message, Exception innerException) : base(message, innerException) { }
 
         public override bool Equals(object obj)
         {
